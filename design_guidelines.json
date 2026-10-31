@@ -1,0 +1,148 @@
+{
+  "app_name": "STARPORT RUSH",
+  "personality": "7 Dark-First Utility with 4 Tactile shapes (Premium Space Game)",
+  "personality_one_liner": "A vibrant, tactile intergalactic puzzle experience set against a deep obsidian space backdrop with neon neon-candy accents.",
+  "color": {
+    "surface": "#0B0C10",
+    "onSurface": "#FFFFFF",
+    "surfaceSecondary": "#1F2833",
+    "onSurfaceSecondary": "#E0E6ED",
+    "surfaceTertiary": "#2C3643",
+    "onSurfaceTertiary": "#FFFFFF",
+    "surfaceInverse": "#FFFFFF",
+    "onSurfaceInverse": "#0B0C10",
+    "brand": "#00FFFF",
+    "brandPrimary": "#00FFFF",
+    "onBrandPrimary": "#000000",
+    "brandSecondary": "#FF007F",
+    "onBrandSecondary": "#FFFFFF",
+    "brandTertiary": "#4169E1",
+    "onBrandTertiary": "#FFFFFF",
+    "success": "#50C878",
+    "onSuccess": "#000000",
+    "warning": "#FFD700",
+    "onWarning": "#000000",
+    "error": "#FF003F",
+    "onError": "#FFFFFF",
+    "info": "#FF7F50",
+    "onInfo": "#000000",
+    "border": "#2C3643",
+    "borderStrong": "#455A64",
+    "divider": "#1F2833",
+    "muted": "#8290A1",
+    "game_entities": {
+      "cyan": "#00FFFF",
+      "yellow": "#FFD700",
+      "orange": "#FF7F50",
+      "pink": "#FF007F",
+      "purple": "#8A2BE2",
+      "green": "#50C878",
+      "blue": "#4169E1",
+      "red": "#FF003F"
+    }
+  },
+  "typography": {
+    "displayFontFamily": "Space Grotesk",
+    "textFontFamily": "DM Sans",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous touch targets for gaming interaction, distinct separation between the top queue, middle dock, and bottom puzzle grid.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "2",
+  "navigation": "stack_only",
+  "icon_set": "Ionicons",
+  "glassmorphism": {
+    "enabled": true,
+    "do's": [
+      "Use on the Settings bottom sheet.",
+      "Use behind the Bottom 10% controls area to separate it from the puzzle grid.",
+      "Use for Victory/Deadlock Modal overlays."
+    ],
+    "dont's": [
+      "Do not use on puzzle grid items (spaceships) or queue elements to ensure high performance."
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Home",
+      "purpose": "Level selection grid and start gateway.",
+      "states": {
+        "loading": "Centered glowing star spinner.",
+        "empty": "N/A",
+        "error": "Failed to load progress message."
+      },
+      "layout": "Centralized CTA layout. Top: Game Title (Neon glow text) + Settings icon. Middle: Scrollable level grid showing padlock or star ratings. Bottom: Large 'Play Latest' CTA. Background: Deep space texture."
+    },
+    {
+      "name": "Game",
+      "purpose": "The main puzzle interface.",
+      "states": {
+        "loading": "Dark void with loading bar.",
+        "empty": "N/A",
+        "error": "Level data invalid."
+      },
+      "layout": "Strict Portrait Layout: \n- Top ~30%: 'Alien Terminal Queue' -> Winding path showing colorful alien passengers waiting.\n- Top ~15%: 'Docking Bays' -> 2 to 4 empty ship slots where spaceships are placed to be filled.\n- Middle ~45%: 'Launch Yard Grid' -> The main traffic jam board containing miniature spaceships with white directional arrows, cockpit detailing, and soft shadows (using RN Views).\n- Bottom ~10%: 'Controls' -> Frosted glass bar housing Undo, Restart, Hint, and Settings buttons."
+    },
+    {
+      "name": "Modals",
+      "purpose": "Victory, Deadlock, and Settings overlays.",
+      "states": {
+        "loading": "N/A",
+        "empty": "N/A",
+        "error": "N/A"
+      },
+      "layout": "Full screen overlay with heavy glassmorphism blur and a central 'surfaceSecondary' modal card. \n- Victory: 3-Star rating animation, Next Level CTA (brandPrimary).\n- Deadlock: 'No Moves Left' message, Undo and Restart CTAs.\n- Settings: Toggles for Music, SFX, Haptics."
+    }
+  ],
+  "images": {
+    "home_hero": {
+      "url": "https://images.unsplash.com/photo-1505506874110-6a7a69069a08?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTV8MHwxfHNlYXJjaHwxfHxkZWVwJTIwc3BhY2UlMjBzdGFycyUyMGdhbGF4eSUyMGRhcmslMjBiYWNrZ3JvdW5kfGVufDB8fHx8MTc5MzQ3MzAwNHww&ixlib=rb-4.1.0&q=85",
+      "alt": "Milky way deep space"
+    },
+    "game_background": {
+      "url": "https://images.unsplash.com/photo-1520034475321-cbe63696469a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTV8MHwxfHNlYXJjaHwyfHxkZWVwJTIwc3BhY2UlMjBzdGFycyUyMGdhbGF4eSUyMGRhcmslMjBiYWNrZ3JvdW5kfGVufDB8fHx8MTc5MzQ3MzAwNHww&ixlib=rb-4.1.0&q=85",
+      "alt": "Night sky filled with stars"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the portrait layout split (30% queue, 15% docking, 45% grid, 10% controls).",
+    "Use RN Views with border radiuses and internal shadows/gradients to build the miniature spaceships. Include directional arrows.",
+    "Do NOT use external Skia libraries; rely entirely on react-native-reanimated and standard RN styling for the puzzle elements.",
+    "Spaceships and aliens must map strictly to the 'game_entities' color palette (cyan, yellow, orange, pink, purple, green, blue, red) to ensure puzzle logic matches visual color coding.",
+    "Implement tactile chunky interactions with generous hitSlop on all spaceships (they should feel like physical board game pieces).",
+    "Ensure 'glassmorphism' is used only on the bottom control bar and modals to keep grid rendering performance optimal.",
+    "Victory and Deadlock states should block grid interaction immediately and present clear CTA paths."
+  ]
+}

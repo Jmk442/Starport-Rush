@@ -1,0 +1,2 @@
+- Starport Rush: purpose = personal now, eventual release. Wants polished; tests on iPhone via Expo Go; priority = game feel over bugs.
+- Likes: snappy arcade vibe, humorous aliens, target teens/young adults

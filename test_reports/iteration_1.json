@@ -1,0 +1,28 @@
+{
+  "summary": "Tested the offline Expo game STARPORT RUSH, Level 1, through the web preview at 390x844, plus the engine unit tests. Engine tests: 10 of 10 pass. Every requested UI flow works: home screen, game layout, blocked yellow tap, hint, the critical win path with 3 stars, Next Level returning home with the notice and stars, deadlock with Undo and Restart, control-bar Undo and Restart, and settings switches that toggle independently and persist across reload. One minor navigation-stack bug was found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Game -> Home (game-home-button and victory-next-button)", "issue": "Both use router.replace('/') from /game, which was pushed on top of home. Home therefore appears twice in the stack (2 home-screen elements in the DOM). On iOS, swiping back from home would show a second home screen. Fix: use router.back(), or router.dismissTo('/') with params (or router.setParams) for the next-level notice.", "affected_testIDs": ["game-home-button", "victory-next-button", "home-screen"]}
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/mobile/tests/engine.test.ts"],
+  "action_items": [
+    "Fix the duplicate home in the navigation stack: replace router.replace('/') in game.tsx (back button and Next Level) with router.back() or dismissTo, and pass the 'stage=next' notice another way.",
+    "Optional: add a 'test:engine' script to package.json. The comment in engine.test.ts mentions 'yarn test:engine', but the script does not exist."
+  ],
+  "critical_code_review_comments": [
+    "tests/tsconfig.json included ../src/game/**/*.ts, which pulled in useGameSession.ts and visuals.ts. Those files use the @/ path alias, which this config does not resolve, so tsc exited with code 2 and the requested '&&' command never ran node. Fixed by narrowing include to engine.ts, solver.ts, levels.ts and types.ts. Tests now compile cleanly: 10 passed.",
+    "The engine, solver and session code is clean, deterministic, and makes good use of the timeline snapshots."
+  ],
+  "updated_files": ["/app/mobile/tests/tsconfig.json"],
+  "success_rate": {"backend": "N/A", "frontend": "95%"},
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The app is client-side only. Wait about 1.5s after a tap and about 3.5s after the yellow or pink taps. Settings switches render an input whose .checked property gives the state. localStorage keys are sr_music, sr_sfx, sr_haptics and sr_stars_N. Reloading on /game stays on /game.",
+  "rca_of_issue": "Duplicate home: index -> push(/game) -> replace(/) swaps game for a new home but keeps the original home under it."
+}
