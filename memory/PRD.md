@@ -21,7 +21,14 @@ Expo app requirement: /app/memory/product/requirements.md (+ full_spec.md). Prem
 - Level 1 playable end-to-end; blocked-tap feedback; deadlock (Pink→Cyan) with Undo/Restart; victory with stars + Next Level; hint; settings; local progress + diagnostics
 - Testing agent iteration_1: all flows pass; nav double-Home bug fixed (back/dismissTo)
 
+## Round 2 (2026-09)
+- Levels 2-5 from a seeded generator, all solver-verified: L2 6x6/3 bays, L3 6x6/3 bays, L4 7x7/3 bays + Galaxy Transport, L5 7x7/4 bays + 2 Galaxy Transports. Share of play paths that win: 28.1% / 13.9% / 7.4% / 4.3%. Passengers per colour exactly match capacity. Traces are in memory/product/solution_traces.md
+- Game feel: snappier timings, taps during an animation skip ahead, combo chain (2.6s window) with popup and yard shake, boarding sounds rising in pitch, combo launch sounds rising in pitch, stronger haptics (heavy/rigid/notification), goofy alien faces (blink, jump, shock, cheer, grumpy) with speech-bubble quips, dancing aliens on victory, upbeat music loop
+- Share card: captures an image via react-native-view-shot + expo-sharing on native; falls back to text Share, then clipboard
+- Progressive level unlocking; Next Level goes straight to the next level
+- Engine tests 26/26; testing agent iteration_2 passed every flow. Its 3 minor issues (combos lost on fast taps, desktop share fallback, share backdrop and queue padding) are fixed
+
 ## Backlog
-- P0 (Stage 2, after owner approval): Levels 2-5, Commuter Cruiser (6) / Galaxy Transport (8) in levels, 3-4 bays
-- P1: on-device performance profiling on iPhone; Skia renderer evaluation on native
-- P2: level select animations, more music variety
+- P1: on-device check of haptics, pitch-rising audio and the image share card in Expo Go on iPhone; frame-rate profiling
+- P1: Levels 6+ (generator in tests/generate_levels.ts already supports specs)
+- P2: Skia renderer evaluation on native; daily seeded challenge level

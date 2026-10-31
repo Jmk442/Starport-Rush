@@ -41,3 +41,26 @@ export function hint(s: GameState): string | null {
   if (s.status !== "PLAYING") return null;
   return solve(s).solution[0] ?? null;
 }
+
+/** Counts complete play paths (to WIN or DEADLOCK) and how many win. Difficulty metric. */
+export function countPaths(start: GameState) {
+  const memo = new Map<string, [number, number]>();
+  const go = (s: GameState): [number, number] => {
+    if (s.status === "WON") return [1, 1];
+    if (s.status === "DEADLOCK") return [0, 1];
+    const k = canonicalKey(s);
+    const m = memo.get(k);
+    if (m) return m;
+    let wins = 0, total = 0;
+    for (const id of legalMoves(s)) {
+      const [w, t] = go(applyTap(s, id).state);
+      wins += w; total += t;
+    }
+    const res: [number, number] = total === 0 ? [0, 1] : [wins, total];
+    memo.set(k, res);
+    return res;
+  };
+  const [wins, total] = go(start);
+  return { wins, total, ratio: wins / total };
+}
+

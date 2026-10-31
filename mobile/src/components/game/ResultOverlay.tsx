@@ -33,9 +33,10 @@ interface Props {
   message: string;
   stars?: number;
   actions: Action[];
+  children?: React.ReactNode;
 }
 
-export function ResultOverlay({ kind, title, message, stars = 0, actions }: Props) {
+export function ResultOverlay({ kind, title, message, stars = 0, actions, children }: Props) {
   const styles = useStyles();
   const { colors } = useTheme();
   const pop = useSharedValue(0);
@@ -65,6 +66,7 @@ export function ResultOverlay({ kind, title, message, stars = 0, actions }: Prop
         <Text style={styles.message} testID={`${kind}-message`}>
           {message}
         </Text>
+        {children}
         <View style={styles.actions}>
           {actions.map((a) => (
             <Pressable
@@ -100,6 +102,7 @@ const useStyles = makeStyles((c) => ({
   title: { fontFamily: fonts.display, fontSize: 26, color: c.onSurface, textAlign: "center" },
   message: { fontFamily: fonts.text, fontSize: 14, color: c.onSurfaceSecondary, textAlign: "center", marginTop: 8, lineHeight: 20 },
   actions: { alignSelf: "stretch", gap: 12, marginTop: 24 },
+  // secondary buttons keep 52pt height for thumbs
   btn: { height: 52, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   primary: { backgroundColor: c.brandPrimary },
   secondary: { backgroundColor: c.surfaceTertiary },

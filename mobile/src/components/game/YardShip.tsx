@@ -34,12 +34,12 @@ function YardShipImpl({ ship, cell, hinted, bumpKey, flashKey, onPress }: Props)
   const pulse = useSharedValue(1);
 
   useEffect(() => {
-    travel.value = withTiming(parked ? 0 : 1, { duration: parked ? 250 : 380, easing: Easing.in(Easing.quad) });
+    travel.value = withTiming(parked ? 0 : 1, { duration: parked ? 180 : 300, easing: Easing.in(Easing.cubic) });
   }, [parked, travel]);
 
   useEffect(() => {
     if (!bumpKey) return;
-    bump.value = withSequence(withTiming(1, { duration: 70 }), withTiming(-0.4, { duration: 90 }), withTiming(0, { duration: 90 }));
+    bump.value = withSequence(withTiming(1.6, { duration: 60 }), withTiming(-0.6, { duration: 80 }), withTiming(0.3, { duration: 60 }), withTiming(0, { duration: 60 }));
   }, [bumpKey, bump]);
 
   useEffect(() => {

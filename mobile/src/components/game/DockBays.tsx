@@ -6,11 +6,11 @@ import { ShipBody } from "@/src/components/game/ShipBody";
 import type { GameState, Ship } from "@/src/game/types";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
 
-function Seats({ ship, size }: { ship: Ship; size: number }) {
+function Seats({ ship, size, compact }: { ship: Ship; size: number; compact: boolean }) {
   const styles = useStyles();
   const { colors } = useTheme();
   return (
-    <View style={styles.seats} testID={`bay-seats-${ship.id}`}>
+    <View style={[styles.seats, compact && styles.seatsCompact]} testID={`bay-seats-${ship.id}`}>
       {Array.from({ length: ship.capacity }, (_, i) => (
         <View
           key={i}
@@ -25,30 +25,30 @@ function Seats({ ship, size }: { ship: Ship; size: number }) {
   );
 }
 
-function DockedShip({ ship, h, leaving }: { ship: Ship; h: number; leaving: boolean }) {
+function DockedShip({ ship, h, leaving, compact }: { ship: Ship; h: number; leaving: boolean; compact: boolean }) {
   const styles = useStyles();
   const enter = useSharedValue(0);
   const fly = useSharedValue(0);
   useEffect(() => {
-    enter.value = withSpring(1, { damping: 14, stiffness: 220 });
+    enter.value = withSpring(1, { damping: 11, stiffness: 320 });
   }, [enter]);
   useEffect(() => {
-    if (leaving) fly.value = withTiming(1, { duration: 460, easing: Easing.in(Easing.cubic) });
+    if (leaving) fly.value = withTiming(1, { duration: 380, easing: Easing.in(Easing.cubic) });
   }, [leaving, fly]);
   const anim = useAnimatedStyle(() => ({
     opacity: (leaving ? 1 - fly.value : 1) * Math.min(1, enter.value),
-    transform: [{ scale: 0.6 + 0.4 * enter.value }, { translateY: -fly.value * h * 1.6 }],
+    transform: [{ scale: 0.5 + 0.5 * enter.value + (leaving ? fly.value * 0.15 : 0) }, { translateY: -fly.value * h * 1.8 }],
   }));
-  const len = h * 0.78;
+  const len = compact ? h * 0.5 : h * 0.78;
   return (
-    <Animated.View style={[styles.docked, anim]}>
-      <ShipBody color={ship.color} symbol={ship.symbol} direction="NORTH" capacity={ship.capacity} length={len} breadth={len * 0.52} />
-      <Seats ship={ship} size={Math.min(12, h * 0.16)} />
+    <Animated.View style={[compact ? styles.dockedCompact : styles.docked, anim]}>
+      <ShipBody color={ship.color} symbol={ship.symbol} direction="NORTH" capacity={ship.capacity} length={len} breadth={len * (ship.capacity === 8 ? 0.7 : 0.52)} />
+      <Seats ship={ship} size={compact ? 8 : Math.min(12, h * 0.16)} compact={compact} />
     </Animated.View>
   );
 }
 
-function BayPad({ index, state, h }: { index: number; state: GameState; h: number }) {
+function BayPad({ index, state, h, compact }: { index: number; state: GameState; h: number; compact: boolean }) {
   const styles = useStyles();
   const id = state.bays[index];
   const ship = id ? state.ships.find((s) => s.id === id)! : null;
@@ -61,7 +61,7 @@ function BayPad({ index, state, h }: { index: number; state: GameState; h: numbe
       const now = state.ships.find((s) => s.id === p.id);
       if (now?.status === "DEPARTED") {
         setGhost({ ...p, boarded: p.capacity });
-        const t = setTimeout(() => setGhost(null), 500);
+        const t = setTimeout(() => setGhost(null), 420);
         prev.current = ship;
         return () => clearTimeout(t);
       }
@@ -74,8 +74,8 @@ function BayPad({ index, state, h }: { index: number; state: GameState; h: numbe
   return (
     <View testID={`dock-bay-${index + 1}`} style={[styles.pad, reserved && styles.padReserved, shown && styles.padActive]}>
       <Text style={styles.padLabel}>BAY {index + 1}</Text>
-      {shown && <DockedShip key={shown.id} ship={shown} h={h} leaving={false} />}
-      {!shown && ghost && <DockedShip key={`ghost-${ghost.id}`} ship={ghost} h={h} leaving />}
+      {shown && <DockedShip key={shown.id} ship={shown} h={h} leaving={false} compact={compact} />}
+      {!shown && ghost && <DockedShip key={`ghost-${ghost.id}`} ship={ghost} h={h} leaving compact={compact} />}
       {!shown && !ghost && (
         <Text style={styles.empty}>{reserved ? "Incoming…" : "Open"}</Text>
       )}
@@ -86,10 +86,11 @@ function BayPad({ index, state, h }: { index: number; state: GameState; h: numbe
 export function DockBays({ state, height }: { state: GameState; height: number }) {
   const styles = useStyles();
   const h = height - 20;
+  const compact = state.bays.length >= 3;
   return (
-    <View testID="docking-bays" style={[styles.row, { height }]}>
+    <View testID="docking-bays" style={[styles.row, compact && styles.rowCompact, { height }]}>
       {state.bays.map((_, i) => (
-        <BayPad key={i} index={i} state={state} h={h} />
+        <BayPad key={i} index={i} state={state} h={h} compact={compact} />
       ))}
     </View>
   );
@@ -113,6 +114,9 @@ const useStyles = makeStyles((c) => ({
   padLabel: { position: "absolute", top: 4, left: 8, fontFamily: fonts.display, fontSize: 10, letterSpacing: 1.5, color: c.muted },
   empty: { fontFamily: fonts.text, color: c.muted, fontSize: 13 },
   docked: { flexDirection: "row", alignItems: "center", gap: 10, paddingTop: 8 },
+  dockedCompact: { alignItems: "center", gap: 4, paddingTop: 12 },
+  rowCompact: { gap: 8 },
+  seatsCompact: { width: 48, justifyContent: "center", gap: 3 },
   seats: { flexDirection: "row", flexWrap: "wrap", width: 56, gap: 4 },
   seat: { borderRadius: 99, borderWidth: 1.5, borderColor: c.borderStrong, backgroundColor: c.surfaceTertiary },
 }));

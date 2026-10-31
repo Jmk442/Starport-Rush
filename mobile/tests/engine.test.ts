@@ -1,8 +1,8 @@
 // Automated engine tests. Run:
 //   npx tsc -p tests/tsconfig.json && node /tmp/starport-tests/tests/engine.test.js
 import { applyTap, checkInvariants, createInitialState, findBlocker, legalMoves, step } from "../src/game/engine";
-import { LEVEL_1 } from "../src/game/levels";
-import { canonicalKey, hint, solve } from "../src/game/solver";
+import { LEVEL_1, LEVELS } from "../src/game/levels";
+import { canonicalKey, countPaths, hint, solve } from "../src/game/solver";
 import type { GameState } from "../src/game/types";
 
 declare const process: { exitCode: number };
@@ -157,6 +157,50 @@ test("exhaustive: every reachable state satisfies invariants", () => {
     }
   }
   ok(seen.size > 3, "explored states");
+});
+
+for (const level of LEVELS) {
+  test(`level ${level.levelId}: passengers per colour exactly match ship capacity`, () => {
+    const need: Record<string, number> = {};
+    const have: Record<string, number> = {};
+    level.ships.forEach((s) => (need[s.color] = (need[s.color] ?? 0) + s.capacity));
+    level.passengerGroups.forEach((g) => (have[g.color] = (have[g.color] ?? 0) + g.count));
+    eq(Object.keys(have).sort(), Object.keys(need).sort(), "colours");
+    for (const c of Object.keys(need)) eq(have[c], need[c], `colour ${c}`);
+  });
+  test(`level ${level.levelId}: layout valid, solver-verified, expectedSolution wins`, () => {
+    const s0 = createInitialState(level);
+    eq(checkInvariants(level, s0), [], "invariants");
+    const r = solve(s0);
+    eq(r.solvable, true, "solvable");
+    eq(r.solution, level.expectedSolution, "BFS solution");
+    let s = s0;
+    for (const id of level.expectedSolution) {
+      const out = applyTap(s, id);
+      eq(out.result, "OK", `tap ${id}`);
+      out.events.forEach((e) => eq(checkInvariants(level, e.snapshot), [], "snapshot invariants"));
+      s = out.state;
+    }
+    eq(s.status, "WON");
+  });
+  if (level.levelId > 1)
+    test(`level ${level.levelId}: has traps (some play paths deadlock) and ships start blocked`, () => {
+      const s0 = createInitialState(level);
+      const p = countPaths(s0);
+      ok(p.wins > 0 && p.wins < p.total, `wins ${p.wins}/${p.total}`);
+      ok(legalMoves(s0).length < level.ships.length, "some ships blocked at start");
+    });
+}
+
+test("difficulty ramps: winning-path ratio strictly decreases from level 2 to 5", () => {
+  const ratios = LEVELS.filter((l) => l.levelId > 1).map((l) => countPaths(createInitialState(l)).ratio);
+  for (let i = 1; i < ratios.length; i++) ok(ratios[i] < ratios[i - 1], `ratios ${ratios.map((r) => r.toFixed(3)).join(",")}`);
+});
+
+test("bigger ships and more bays appear in later levels", () => {
+  ok(LEVELS.some((l) => l.ships.some((s) => s.capacity === 6)), "cruiser present");
+  ok(LEVELS.some((l) => l.ships.some((s) => s.capacity === 8)), "galaxy transport present");
+  eq(LEVELS.map((l) => l.dockingBayCount), [2, 3, 3, 3, 4]);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

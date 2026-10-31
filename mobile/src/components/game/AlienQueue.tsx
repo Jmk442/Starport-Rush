@@ -1,54 +1,117 @@
-// Winding terminal queue. Batched rendering: one absolute layer, memoized
-// aliens with stable keys, capped at MAX_RENDERED (overflow shown as a count).
+// Winding terminal queue with goofy reactions. Batched rendering: one absolute
+// layer, memoized aliens with stable keys, a single shared jump + blink value
+// drives every alien, capped at MAX_RENDERED (overflow shown as a count).
 import { Ionicons } from "@react-native-vector-icons/ionicons";
-import { memo, useEffect, useMemo } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Text, View } from "react-native";
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, {
+  type SharedValue,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 
+import { AlienFace } from "@/src/components/game/AlienFace";
+import type { Mood } from "@/src/game/useGameSession";
 import type { AlienColor, QueueGroup } from "@/src/game/types";
 import { COLOR_LABEL, COLOR_SYMBOL, SYMBOL_ICON } from "@/src/game/visuals";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
 
 const SLOT = 30;
 const SIZE = 22;
-const MAX_RENDERED = 60;
+const MAX_RENDERED = 80;
 
-const Alien = memo(function Alien({ color, left, top, front }: { color: AlienColor; left: number; top: number; front: boolean }) {
+export const QUIPS: Record<Mood, string[]> = {
+  idle: [""],
+  shock: ["Hey! Watch it!", "Beep?! It's stuck!", "Rude!!", "Wrong way, pilot!", "My antenna!", "Ow. Ow. Ow."],
+  cheer: ["Wheee!", "Window seat!", "Space road trip!", "Bye, Earthlings!", "Zoom zoom!", "Snacks onboard?"],
+  grumpy: ["Ugh. Bays FULL.", "We'll be here all eon…", "Not cool, captain.", "I want my mom-blob.", "Seriously?!"],
+  party: ["WE DID IT!", "Party in space!", "Best. Pilot. Ever."],
+};
+
+const Alien = memo(function Alien({
+  color,
+  left,
+  top,
+  front,
+  variant,
+  mood,
+  jump,
+  blink,
+}: {
+  color: AlienColor;
+  left: number;
+  top: number;
+  front: boolean;
+  variant: number;
+  mood: Mood;
+  jump: SharedValue<number>;
+  blink: SharedValue<number>;
+}) {
   const styles = useStyles();
-  const { colors } = useTheme();
   const x = useSharedValue(left);
   const y = useSharedValue(top);
   useEffect(() => {
-    x.value = withTiming(left, { duration: 140 });
-    y.value = withTiming(top, { duration: 140 });
+    x.value = withTiming(left, { duration: 110 });
+    y.value = withTiming(top, { duration: 110 });
   }, [left, top, x, y]);
-  const anim = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }, { translateY: y.value }] }));
+  const amp = 3 + (variant % 3) * 2 + (front ? 4 : 0);
+  const anim = useAnimatedStyle(() => ({
+    transform: [{ translateX: x.value }, { translateY: y.value - jump.value * amp }, { rotate: `${jump.value * (variant % 2 ? 8 : -8)}deg` }],
+  }));
   return (
     <Animated.View style={[styles.alien, anim]}>
-      <View style={[styles.antenna, { backgroundColor: colors[color] }]} />
-      <View style={[styles.body, { backgroundColor: colors[color] }, front && styles.front]}>
-        <View style={styles.eyes}>
-          <View style={styles.eye}>
-            <View style={styles.pupil} />
-          </View>
-          <View style={styles.eye}>
-            <View style={styles.pupil} />
-          </View>
-        </View>
-        <Ionicons name={SYMBOL_ICON[COLOR_SYMBOL[color]]} size={7} color={colors.surface} />
-      </View>
+      <AlienFace color={color} size={SIZE} mood={front || mood !== "cheer" ? mood : "idle"} blink={blink} variant={variant} />
     </Animated.View>
   );
 });
 
-export function AlienQueue({ queue, width, height }: { queue: QueueGroup[]; width: number; height: number }) {
+interface Props {
+  queue: QueueGroup[];
+  width: number;
+  height: number;
+  mood: { mood: Mood; n: number };
+}
+
+export function AlienQueue({ queue, width, height, mood }: Props) {
   const styles = useStyles();
   const { colors } = useTheme();
   const total = queue.reduce((a, g) => a + g.count, 0);
   const inner = width - 32;
   const perRow = Math.max(4, Math.floor(inner / SLOT));
-  const rows = Math.max(1, Math.floor((height - 36) / SLOT));
+  const rows = Math.max(1, Math.floor((height - 40) / SLOT));
   const capacity = Math.min(MAX_RENDERED, perRow * rows);
+  const jump = useSharedValue(0);
+  const blink = useSharedValue(1);
+  const [face, setFace] = useState<Mood>("idle");
+  const [bubble, setBubble] = useState<string | null>(null);
+
+  useEffect(() => {
+    blink.value = withRepeat(withSequence(withDelay(2600, withTiming(0.1, { duration: 70 })), withTiming(1, { duration: 90 })), -1);
+  }, [blink]);
+
+  useEffect(() => {
+    const m = mood.mood;
+    setFace(m);
+    if (m === "idle") {
+      setBubble(null);
+      return;
+    }
+    const q = QUIPS[m];
+    setBubble(q[mood.n % q.length]);
+    if (m === "shock") jump.value = withSequence(withTiming(1.4, { duration: 80 }), withSpring(0, { damping: 6, stiffness: 300 }));
+    else if (m === "grumpy") jump.value = withSequence(withTiming(-0.5, { duration: 120 }), withTiming(0.3, { duration: 120 }), withTiming(0, { duration: 160 }));
+    else jump.value = withSequence(withTiming(1, { duration: 120 }), withSpring(0, { damping: 7, stiffness: 260 }));
+    const t = setTimeout(() => {
+      setBubble(null);
+      if (m !== "grumpy") setFace("idle");
+    }, m === "grumpy" ? 4000 : 1300);
+    return () => clearTimeout(t);
+  }, [mood, jump]);
 
   const aliens = useMemo(() => {
     const out: { key: number; color: AlienColor; left: number; top: number }[] = [];
@@ -65,6 +128,7 @@ export function AlienQueue({ queue, width, height }: { queue: QueueGroup[]; widt
   }, [queue, perRow, rows, capacity, total]);
 
   const front = queue[0];
+  const head = aliens[0];
   return (
     <View testID="alien-queue" style={[styles.wrap, { height }]}>
       <View style={styles.header}>
@@ -81,15 +145,20 @@ export function AlienQueue({ queue, width, height }: { queue: QueueGroup[]; widt
           {total} waiting
         </Text>
       </View>
-      <View style={[styles.lane, { width: perRow * SLOT, height: rows * SLOT }]}>
+      <View style={[styles.lane, { width: perRow * SLOT, height: rows * SLOT + 8 }]}>
         {Array.from({ length: rows }, (_, r) => (
-          <View key={r} style={[styles.rail, { top: r * SLOT + SLOT / 2 - 1 }]} />
+          <View key={r} style={[styles.rail, { top: r * SLOT + SLOT / 2 + 5 }]} />
         ))}
         {aliens.map((a, idx) => (
-          <Alien key={a.key} color={a.color} left={a.left} top={a.top} front={idx === 0} />
+          <Alien key={a.key} color={a.color} left={a.left} top={a.top} front={idx === 0} variant={a.key} mood={face} jump={jump} blink={blink} />
         ))}
         {total > capacity && <Text style={styles.overflow}>+{total - capacity}</Text>}
         {total === 0 && <Text style={styles.cleared}>Terminal clear!</Text>}
+        {bubble && head && (
+          <View testID="alien-speech-bubble" style={[styles.bubble, { left: Math.max(4, head.left - 6), top: Math.max(2, head.top - 30) }]}>
+            <Text style={styles.bubbleText}>{bubble}</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -104,13 +173,16 @@ const useStyles = makeStyles((c) => ({
   count: { marginLeft: "auto", fontFamily: fonts.text, color: c.muted, fontSize: 12 },
   lane: { alignSelf: "center", marginTop: 4, backgroundColor: c.surfaceSecondary, borderRadius: radius.md, overflow: "hidden" },
   rail: { position: "absolute", left: 8, right: 8, height: 2, backgroundColor: c.border, opacity: 0.8 },
-  alien: { position: "absolute", top: 3, left: 0, width: SIZE, alignItems: "center" },
-  antenna: { width: 2, height: 4, borderRadius: 1 },
-  body: { width: SIZE, height: SIZE - 2, borderRadius: SIZE / 2, alignItems: "center", justifyContent: "center", gap: 1 },
-  front: { borderWidth: 1.5, borderColor: c.shipDetail },
-  eyes: { flexDirection: "row", gap: 3 },
-  eye: { width: 6, height: 6, borderRadius: 3, backgroundColor: c.shipDetail, alignItems: "center", justifyContent: "center" },
-  pupil: { width: 3, height: 3, borderRadius: 2, backgroundColor: c.shadow },
+  alien: { position: "absolute", top: 9, left: 0, width: SIZE, alignItems: "center" },
   overflow: { position: "absolute", right: 6, top: 4, fontFamily: fonts.display, color: c.onSurface, fontSize: 12 },
   cleared: { position: "absolute", alignSelf: "center", top: "40%", fontFamily: fonts.display, color: c.success, fontSize: 14 },
+  bubble: {
+    position: "absolute",
+    backgroundColor: c.surfaceInverse,
+    borderRadius: radius.md,
+    borderBottomLeftRadius: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  bubbleText: { fontFamily: fonts.display, fontSize: 12, color: c.onSurfaceInverse },
 }));

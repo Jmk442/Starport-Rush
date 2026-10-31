@@ -1,0 +1,35 @@
+{
+  "summary": "Round 2 test of STARPORT RUSH (offline Expo game) at 390x844 on the web preview, plus engine tests. Engine tests: 26 passed, 0 failed. All 10 requested flows work: L1 regression (win and deadlock with Undo/Restart), blocked-tap quip with moves staying 0, the COMBO x2 popup, fast-forward on tap, victory buttons (Next loads L2 in place with 3 bays; Share opens the card; Close and Replay work), the L2-L5 solutions each reaching victory, L5 'All Sectors Cleared' returning home with the notice and one home screen, progressive tile unlock and home-play-button, hint on L3-L5, and the L4/L5 layout with no element overflowing the viewport (4 compact bays show docked ships and seats). Only minor issues were found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ShareCard (web fallback)", "issue": "Headless Chromium has no navigator.share, so RN-web Share.share rejects twice and share-status says \"Sharing isn't available here.\" Mobile browsers have navigator.share, so this case only affects desktop web. Suggestion: fall back to navigator.clipboard.writeText(shareText) and show 'Copied to clipboard'.", "testID": "share-card-share-button", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Fast-forward (useGameSession.dispatch while busy)", "issue": "The skipped timeline events never run their side effects. DEPART combo counting, cheer/party/grumpy moods, feedbackFor sounds/haptics and the wins/deadlocks diag bumps are all lost. Tapping fast through L1 (cyan, yellow, pink, 150ms apart) wins with no combo popup and bestCombo 0, so fast players get fewer combos. Suggestion: when fast-forwarding, loop over the remaining unplayed events and apply the combo, mood and diag logic without delays (and optionally skip audio).", "affected_testIDs": ["combo-popup"]}
+    ],
+    "design_issues": [
+      {"screen": "Share card modal", "issues": ["The victory overlay's 'Replay' button shows through the scrim in the gap between the share card and its Share/Close buttons. Use a more opaque backdrop for the share modal."]},
+      {"screen": "Game L5 terminal", "issues": ["The 5-row alien queue at the start of L5 puts the top row's antennae right at the top edge of the terminal panel. It looks cramped, but nothing is clipped badly."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/mobile/tests/engine.test.ts"],
+  "action_items": [
+    "LOW: in useGameSession, apply the combo, mood and diag side effects of skipped events when fast-forwarding.",
+    "LOW: on web, add a clipboard fallback to ShareCard when navigator.share is unavailable.",
+    "LOW: make the share modal backdrop more opaque so the victory buttons don't show through."
+  ],
+  "critical_code_review_comments": [
+    "useGameSession fast-forward is correct for state: core.current.state already holds the final state, so the display stays in sync. Only the side effects are dropped (see above).",
+    "game.tsx goNext uses router.setParams, and GameBody is keyed by levelId, so the session resets cleanly. The last level uses dismissTo('/'), leaving a single home in the stack (verified).",
+    "Level unlock logic in index.tsx is correct. Locked tiles are disabled (aria-disabled=true), and taps on them do nothing."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100% of requested flows (3 minor polish issues)"},
+  "seed_data_creation": "none (localStorage sr_stars_N set manually for unlock checks)",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Each browser_automation call gets a fresh context. Set localStorage sr_stars_N to unlock tiles. /game?level=N opens a level directly. Waiting 3s between solution taps is reliable, and rapid 150ms taps also win thanks to fast-forward. Combo popup testID: combo-popup.",
+  "rca_of_issue": "Missing combo on rapid taps: dispatch() calls clearTimers() while busy, which cancels the pending setTimeout callbacks. Those callbacks hold all the per-event logic (combo counting in DEPART, moods, feedback)."
+}

@@ -23,9 +23,11 @@ export default function Home() {
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    if (params.stage === "next") setNotice("Level 1 cleared! Level 2 docks in the next update.");
+    if (params.stage === "complete") setNotice("All 5 sectors cleared! You're officially a Starport legend.");
   }, [params.stage]);
 
+  const unlocked = (id: number) => LEVELS.some((l) => l.levelId === id) && (id === 1 || (prefs.stars[id - 1] ?? 0) > 0);
+  const latest = Math.max(...LEVELS.map((l) => l.levelId).filter(unlocked));
   const play = (id: number) => router.push({ pathname: "/game", params: { level: String(id) } });
 
   return (
@@ -60,7 +62,7 @@ export default function Home() {
         <View style={styles.grid}>
           {Array.from({ length: TOTAL_PLANNED_LEVELS }, (_, i) => {
             const id = i + 1;
-            const available = LEVELS.some((l) => l.levelId === id);
+            const available = unlocked(id);
             const stars = prefs.stars[id] ?? 0;
             return (
               <Animated.View key={id} entering={FadeInDown.delay(150 + i * 70).duration(400)} style={styles.tileWrap}>
@@ -82,7 +84,7 @@ export default function Home() {
                   ) : (
                     <>
                       <Ionicons name="lock-closed" size={18} color={colors.muted} />
-                      <Text style={styles.soon}>Soon</Text>
+                      <Text style={styles.soon}>Clear {id - 1}</Text>
                     </>
                   )}
                 </Pressable>
@@ -91,9 +93,9 @@ export default function Home() {
           })}
         </View>
 
-        <Pressable testID="home-play-button" onPress={() => play(1)} style={({ pressed }) => [styles.cta, pressed && styles.pressed]}>
+        <Pressable testID="home-play-button" onPress={() => play(latest)} style={({ pressed }) => [styles.cta, pressed && styles.pressed]}>
           <Ionicons name="rocket" size={20} color={colors.onBrandPrimary} />
-          <Text style={styles.ctaText}>{prefs.stars[1] ? "Play Level 1 Again" : "Play Level 1"}</Text>
+          <Text style={styles.ctaText}>{prefs.stars[latest] ? `Replay Level ${latest}` : `Play Level ${latest}`}</Text>
         </Pressable>
       </ScrollView>
       <SettingsSheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} />

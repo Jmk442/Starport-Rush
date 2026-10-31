@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { Text, View } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
 
 import { YardShip } from "@/src/components/game/YardShip";
-import type { BlockedFx } from "@/src/game/useGameSession";
+import type { BlockedFx, ComboFx } from "@/src/game/useGameSession";
 import type { GameState } from "@/src/game/types";
 import { fonts, makeStyles, radius } from "@/src/theme";
 
@@ -10,16 +12,24 @@ interface Props {
   cell: number;
   hintId: string | null;
   blocked: BlockedFx | null;
+  combo: ComboFx | null;
   onTap: (id: string) => void;
 }
 
-export function LaunchYard({ state, cell, hintId, blocked, onTap }: Props) {
+export function LaunchYard({ state, cell, hintId, blocked, combo, onTap }: Props) {
   const styles = useStyles();
   const { width, height } = state.board;
+  const shake = useSharedValue(0);
+  useEffect(() => {
+    if (!combo) return;
+    const a = Math.min(8, 2 + combo.count * 1.5);
+    shake.value = withSequence(withTiming(a, { duration: 40 }), withTiming(-a, { duration: 60 }), withTiming(a / 2, { duration: 50 }), withTiming(0, { duration: 60 }));
+  }, [combo, shake]);
+  const shakeAnim = useAnimatedStyle(() => ({ transform: [{ translateX: shake.value }] }));
   return (
     <View testID="launch-yard" style={styles.frame}>
       <Text style={styles.label}>LAUNCH YARD</Text>
-      <View style={[styles.board, { width: width * cell, height: height * cell }]}>
+      <Animated.View style={[styles.board, { width: width * cell, height: height * cell }, shakeAnim]}>
         {Array.from({ length: width * height }, (_, i) => (
           <View key={i} style={[styles.cell, { left: (i % width) * cell, top: Math.floor(i / width) * cell, width: cell, height: cell }]}>
             <View style={styles.cellInner} />
@@ -36,7 +46,7 @@ export function LaunchYard({ state, cell, hintId, blocked, onTap }: Props) {
             onPress={onTap}
           />
         ))}
-      </View>
+      </Animated.View>
     </View>
   );
 }

@@ -34,3 +34,9 @@ Exact files created, architecture summary, screenshot, verified solution trace, 
 ## Next round notes (user words)
 "polish it" - "it is for eventual release but is for me at the moment. and I would like it polished" - Priority when testing: "feels to play".
 Style direction (agreed with user): snappy, arcade-y, bold neon, strong haptics, combo feel with rising sound pitch, upbeat short music, instant undo/restart. Aliens: "humour in the aliens (silly expressions and reactions)".
+
+## Round 2 (owner approved Stage 1)
+User's words: "Game Feel Polish: Make the game snappier with a combo chain, pitch-rising sounds, stronger haptics and goofy alien reactions"
+"Build Levels 2-5: Approve Stage 1 and add Levels 2-5 with bigger ships and more docking bays" (levels 2-5 as specified in /app/memory/product/full_spec.md master prompt section 8: each solver-verified, solution traces saved, passenger totals per colour matching capacity exactly)
+"Share Card: Add a shareable 'Cleared in 3 moves ★★★' card so friends can compete"
+Earlier direction: snappy arcade vibe, humorous aliens, user wants it polished; focus on how it feels to play.

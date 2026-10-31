@@ -9,5 +9,5 @@
     "types": [],
     "skipLibCheck": true
   },
-  "include": ["engine.test.ts", "../src/game/engine.ts", "../src/game/solver.ts", "../src/game/levels.ts", "../src/game/types.ts"]
+  "include": ["engine.test.ts", "generate_levels.ts", "trace_levels.ts", "../src/game/engine.ts", "../src/game/solver.ts", "../src/game/levels.ts", "../src/game/types.ts"]
 }

@@ -4,14 +4,18 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AlienFace } from "@/src/components/game/AlienFace";
 import { AlienQueue } from "@/src/components/game/AlienQueue";
+import { ComboPopup } from "@/src/components/game/ComboPopup";
 import { ControlBar } from "@/src/components/game/ControlBar";
+import { ShareCardModal, type ShareData } from "@/src/components/game/ShareCard";
 import { DockBays } from "@/src/components/game/DockBays";
 import { LaunchYard } from "@/src/components/game/LaunchYard";
 import { ResultOverlay } from "@/src/components/game/ResultOverlay";
 import { SettingsSheet } from "@/src/components/SettingsSheet";
 import { Starfield } from "@/src/components/Starfield";
-import { getLevel, LEVEL_1 } from "@/src/game/levels";
+import { getLevel, LEVEL_1, LEVELS } from "@/src/game/levels";
+import type { LevelDef } from "@/src/game/types";
 import { starsFor, useGameSession } from "@/src/game/useGameSession";
 import { COLOR_LABEL } from "@/src/game/visuals";
 import { syncMusic } from "@/src/services/audio";
@@ -19,24 +23,38 @@ import { recordStars, usePrefs } from "@/src/services/prefs";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
 
 export default function GameScreen() {
+  const params = useLocalSearchParams<{ level?: string }>();
+  const level = useMemo(() => getLevel(Number(params.level ?? 1)) ?? LEVEL_1, [params.level]);
+  // keyed so switching level resets the whole session
+  return <GameBody key={level.levelId} level={level} />;
+}
+
+const PARTY: ("cyan" | "pink" | "yellow" | "green")[] = ["cyan", "pink", "yellow", "green"];
+
+function GameBody({ level }: { level: LevelDef }) {
   const styles = useStyles();
   const { colors } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const params = useLocalSearchParams<{ level?: string }>();
-  const level = useMemo(() => getLevel(Number(params.level ?? 1)) ?? LEVEL_1, [params.level]);
   const session = useGameSession(level);
   const { display } = session;
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [shareData, setShareData] = useState<ShareData | null>(null);
   const prefs = usePrefs();
+  const isLast = level.levelId >= LEVELS[LEVELS.length - 1].levelId;
+  const goNext = () => {
+    if (isLast) router.dismissTo({ pathname: "/", params: { stage: "complete" } });
+    else router.setParams({ level: String(level.levelId + 1) });
+  };
+  const baysFull = display.bays.every((b) => b !== null);
 
   useEffect(() => {
     syncMusic(true);
     return () => syncMusic(false);
   }, [prefs.music]);
 
-  const stars = display.status === "WON" ? starsFor(display, level.expectedSolution.length) : 0;
+  const stars = display.status === "WON" ? starsFor(display) : 0;
   useEffect(() => {
     if (display.status === "WON") recordStars(level.levelId, stars);
   }, [display.status, stars, level.levelId]);
@@ -73,11 +91,19 @@ export default function GameScreen() {
               <Text style={styles.movesLabel}>moves</Text>
             </View>
           </View>
-          <AlienQueue queue={display.queue} width={width} height={queueH - 52} />
+          <AlienQueue queue={display.queue} width={width} height={queueH - 52} mood={session.mood} />
         </View>
         <DockBays state={display} height={dockH} />
         <View style={{ height: yardH }}>
-          <LaunchYard state={display} cell={cell} hintId={session.hintId} blocked={session.blocked} onTap={(id) => session.dispatch({ type: "TAP_SHIP", shipId: id })} />
+          <LaunchYard
+            state={display}
+            cell={cell}
+            hintId={session.hintId}
+            blocked={session.blocked}
+            combo={session.combo}
+            onTap={(id) => session.dispatch({ type: "TAP_SHIP", shipId: id })}
+          />
+          <ComboPopup combo={session.combo} />
         </View>
         <ControlBar
           height={ctrlH}
@@ -93,20 +119,46 @@ export default function GameScreen() {
       {display.status === "WON" && (
         <ResultOverlay
           kind="victory"
-          title="Launch Complete!"
-          message={`Every alien is aboard. Cleared in ${display.moves} moves${display.undos ? ` with ${display.undos} undo${display.undos > 1 ? "s" : ""}` : ""}.`}
+          title={isLast ? "Starport Legend!" : "Launch Complete!"}
+          message={`Cleared in ${display.moves} moves${display.undos ? ` with ${display.undos} undo${display.undos > 1 ? "s" : ""}` : ""}${session.bestCombo >= 2 ? ` · best combo ×${session.bestCombo}` : ""}.`}
           stars={stars}
           actions={[
-            { id: "next", label: "Next Level", primary: true, onPress: () => router.dismissTo({ pathname: "/", params: { stage: "next" } }) },
+            { id: "next", label: isLast ? "All Sectors Cleared" : `Next Level (${level.levelId + 1})`, primary: true, onPress: goNext },
+            {
+              id: "share",
+              label: "Share Score",
+              onPress: () =>
+                setShareData({
+                  levelId: level.levelId,
+                  levelName: level.name,
+                  moves: display.moves,
+                  stars,
+                  bestCombo: session.bestCombo,
+                  seconds: Math.round(session.elapsedMs() / 1000),
+                }),
+            },
             { id: "replay", label: "Replay", onPress: () => session.dispatch({ type: "RESTART" }) },
           ]}
-        />
+        >
+          <View style={styles.party}>
+            {PARTY.map((c, i) => (
+              <View key={c} style={{ transform: [{ translateY: i % 2 ? -8 : 0 }, { rotate: `${(i - 1.5) * 10}deg` }] }}>
+                <AlienFace color={c} size={30} mood="party" variant={i} />
+              </View>
+            ))}
+          </View>
+        </ResultOverlay>
       )}
+      <ShareCardModal data={shareData} onClose={() => setShareData(null)} />
       {display.status === "DEADLOCK" && (
         <ResultOverlay
           kind="deadlock"
           title="Terminal Jammed"
-          message={`Both docking bays are full and no ${frontColor ? COLOR_LABEL[frontColor] : ""} ship can dock for the alien at the front. Undo your last launch or restart.`}
+          message={
+            baysFull
+              ? `All ${display.bays.length} docking bays are full and no ${frontColor ? COLOR_LABEL[frontColor] : ""} ship can dock for the aliens at the front. Undo your last launch or restart.`
+              : "Every remaining ship is boxed in. Undo your last launch or restart."
+          }
           actions={[
             { id: "undo", label: "Undo", primary: true, onPress: () => session.dispatch({ type: "UNDO" }) },
             { id: "restart", label: "Restart", onPress: () => session.dispatch({ type: "RESTART" }) },
@@ -120,6 +172,7 @@ export default function GameScreen() {
 
 const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surface },
+  party: { flexDirection: "row", gap: 8, marginTop: 16, alignItems: "flex-end" },
   topBar: { flexDirection: "row", alignItems: "center", height: 52, paddingHorizontal: 16, gap: 12 },
   iconBtn: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: c.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   titleWrap: { flex: 1 },
