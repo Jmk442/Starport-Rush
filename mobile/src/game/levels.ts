@@ -1,4 +1,5 @@
 import { EXTRA_LEVELS } from "./levels_extra";
+import { SECTOR_LEVELS } from "./levels_sectors";
 import type { LevelDef } from "./types";
 
 // Level 1 JSON exactly as specified in the Technical Addendum v1.1 (section 4).
@@ -589,7 +590,7 @@ export const LEVEL_5: LevelDef = {
   ]
 };
 
-export const LEVELS: LevelDef[] = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, ...EXTRA_LEVELS];
+export const LEVELS: LevelDef[] = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, ...EXTRA_LEVELS, ...SECTOR_LEVELS];
 export const TOTAL_PLANNED_LEVELS = LEVELS.length;
 
 export function getLevel(id: number): LevelDef | undefined {

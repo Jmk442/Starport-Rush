@@ -1,0 +1,32 @@
+{
+  "summary": "Retest of the iteration_4 fixes. All target fixes verified. (1) Pasting the full shared message (encoded %7E deep link first, then the bare code) into home-replay-input and tapping watch opens replay-screen, the replay plays, and 'Watch again' appears. The bare code works. Garbage shows home-replay-error. (2) Backend race: new test class TestConcurrentFirstSubmit ran 3 rounds each of 12 and 24 parallel first POSTs. All returned 200 and left exactly 1 doc. The pytest file passes 25/25. (3) The daily victory title is 'Daily Cleared!' (1537 pts, posted). View Leaderboard leaves exactly 1 daily-screen, and Back goes home. (4) The replay kicker shows 'COMBO ×3 REPLAY · LEVEL 1'. The L21 Ice Nebula sky gradient renders and is visible. (5) Engine tests 101/101 and daily.test.js all pass, including the full-message extraction case.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/daily/{date}/scores", "issue": "Lost-update race (not the 500 any more): the handler reads and then does $set, so two parallel improving submissions from the same device can let the lower score win. Reproduced 1 of 5 rounds with 16 parallel posts (final score 1014 instead of 1015). Low real-world impact. Fix with an atomic conditional update, e.g. update_one({date, device_id, $or:[{score:{$lt:s}},{score:s,seconds:{$gt:t}}]}, {$set:...}), plus an upsert or insert fallback."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Replay (375x667, web preview only)", "issues": ["replay-title '@GrumpyZibble56's COMBO ×3' still truncates on web (scrollWidth 299 > clientWidth 287, 20px), because react-native-web ignores adjustsFontSizeToFit. It should shrink on native iOS. The kicker now shows COMBO ×3, so the info is not lost. Optional: compute fontSize from the text length for the web."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_daily_leaderboard.py", "/app/test_reports/pytest/pytest_results_iter5.xml", "/tmp/race_max.py"],
+  "action_items": [
+    "Optional (minor): make the daily score upsert atomic to avoid lost updates under concurrent improving posts",
+    "Optional (web only): replay-title shrink fallback, since adjustsFontSizeToFit is a no-op on react-native-web"
+  ],
+  "critical_code_review_comments": [
+    "findReplayCode: decodeURIComponent falls back to the raw text when there is a stray %. It still works because the loop tries every SR1 match and the bare code follows the link.",
+    "submit_daily_score retry loop: DuplicateKeyError -> retry as update. That fixes the 500, but the read-modify-write is not atomic (see the minor issue)."
+  ],
+  "updated_files": ["/app/backend/tests/test_daily_leaderboard.py (added TestConcurrentFirstSubmit, parametrized 12/24)"],
+  "success_rate": {"backend": "100% (25/25)", "frontend": "100% of the retest items"},
+  "seed_data_creation": "test- device docs cleaned up. The UI daily run posted one real score for today (2026-10-31) under the browser's random device id.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "UTC today is 2026-10-31. Get the daily solution with: node -e \"const d=require('/tmp/starport-tests/src/game/daily.js');console.log(d.dailyLevel(d.todayKey()).expectedSolution)\" (after the tsc build). Valid test replay code: SR1.1.0.3.GrumpyZibble56.cyan-01~yellow-01~pink-01."
+}

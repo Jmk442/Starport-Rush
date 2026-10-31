@@ -41,7 +41,8 @@ export function useGameSession(level: LevelDef) {
   const [resultReady, setResultReady] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const busyRef = useRef(false);
-  const comboRef = useRef({ count: 0, last: 0 });
+  const comboRef = useRef({ count: 0, last: 0, start: 0 });
+  const bestRef = useRef({ count: 0, from: 0, to: 0 });
   const startedAt = useRef(Date.now());
 
   const clearTimers = () => {
@@ -60,9 +61,12 @@ export function useGameSession(level: LevelDef) {
       cr.count = now - cr.last < COMBO_WINDOW_MS ? cr.count + 1 : 1;
       cr.last = now;
       c = cr.count;
+      const movesSoFar = core.current.state.moves;
+      if (c === 1) cr.start = Math.max(0, movesSoFar - 1);
       if (c >= 2) {
         setCombo({ count: c, n: now });
         setBestCombo((b) => Math.max(b, c));
+        if (c > bestRef.current.count) bestRef.current = { count: c, from: cr.start, to: movesSoFar };
       }
       react("cheer");
     }
@@ -104,7 +108,11 @@ export function useGameSession(level: LevelDef) {
       setHintId(null);
       setResultReady(false);
       if (out.result === "UNDONE" || out.result === "RESTARTED") {
-        comboRef.current = { count: 0, last: 0 };
+        comboRef.current = { count: 0, last: 0, start: 0 };
+        if (bestRef.current.to > out.state.moves) {
+          bestRef.current = { count: 0, from: 0, to: 0 };
+          setBestCombo(0);
+        }
         react("idle");
       }
       if (out.result === "UNDONE") bumpDiag("undos");
@@ -115,7 +123,7 @@ export function useGameSession(level: LevelDef) {
       }
       if (out.result === "BLOCKED") {
         bumpDiag("blockedTaps");
-        comboRef.current = { count: 0, last: 0 };
+        comboRef.current = { ...comboRef.current, count: 0, last: 0 };
         const e = out.events[0].event as Extract<GameEvent, { type: "BLOCKED" }>;
         setBlocked({ shipId: e.shipId, blockerId: e.blockerId, n: Date.now() });
         react("shock");
@@ -168,6 +176,8 @@ export function useGameSession(level: LevelDef) {
     dispatch,
     requestHint,
     elapsedMs: () => Date.now() - startedAt.current,
+    /** Best combo window + the exact tap list needed to reproduce it. */
+    comboReplay: () => ({ ...bestRef.current, moves: core.current.state.replay.slice(0, bestRef.current.to) }),
   };
 }
 

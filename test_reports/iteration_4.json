@@ -1,0 +1,43 @@
+{
+  "summary": "Round 4 (Daily Challenge + leaderboard, sectors L16-30, combo replays, layout) tested. Unit tests: engine 101/101 and daily all pass. Backend: 23/23 pytest pass (upsert-best, ranking, you/total, 422/400 validation). End-to-end daily flow works on web: daily screen -> play (DAILY · 2026-10-31) -> solved with expectedSolution -> 1531 pts, 'Posted to the leaderboard' -> leaderboard row '(you)' with a watch button -> the replay plays. Offline banner shows when the API is blocked. Sectors: 4 groups, 30 tiles, unlock in order; L16/21/26 show sector names with themed yard and sky; L16 won, Next goes to L17; music status reads 'playing' in L16/21/26. Combo replay: L1 combo x3, the share-replay copy fallback plus toast work, the bare code opens the replay, it plays and 'Watch again' appears, invalid codes are rejected. Found 1 functional bug (pasting the full shared message fails) and 3 minor bugs.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/daily/{date}/scores", "issue": "Race on first submission: concurrent POSTs for the same new device_id hit the unique index, raising DuplicateKeyError and a 500 (reproduced 1 in 24 with 8 parallel requests). Fix: use a single update_one/find_one_and_update with upsert=True (with $max-like logic), or catch DuplicateKeyError and retry as an update. Can happen in practice because victory and daily-screen focus both call syncDaily."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Home 'Watch a replay' (findReplayCode in src/game/replay.ts)", "issue": "Pasting the whole shared message (which is what the share/copy produces) shows home-replay-error. The message has the deep link first, with the code URL-encoded (cyan-01%7Eyellow-01...). findReplayCode matches that first SR1. occurrence, and decodeReplay rejects it because of '%7E'. Only pasting the bare code works. Fix: decodeURIComponent the text, or try every SR1 match and return the first that decodes.", "testID": "home-replay-input / home-replay-error", "priority": "HIGH"},
+      {"component": "Daily victory overlay (game.tsx isLast)", "issue": "Daily wins always show the title 'Starport Legend!' because isLast = level.levelId (1000) >= 30. It should be a daily-specific title.", "testID": "victory-title", "priority": "LOW"},
+      {"component": "Daily victory -> View Leaderboard (goNext uses router.replace('/daily'))", "issue": "This leaves 2 daily screens in the stack (Playwright found 2 daily-screen elements). Back from the leaderboard then lands on the old daily screen instead of home. Use router.back(), or dismissTo('/daily').", "testID": "victory-leaderboard-button / daily-back-button", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Replay (375 wide)", "issues": ["replay-title '@GrumpyZibble56's COMBO ×3' is truncated to 'COMBO…' (scrollWidth 299 > 287), so the combo number is hidden for long handles. It fits at 390. Reduce the font size, allow 2 lines, or put the combo on its own line."]},
+      {"screen": "Ice Nebula levels", "issues": ["The sky glow on L21 is barely visible compared with Lava and Neon (top of screen looks almost black). Consider a brighter iceSky token."]},
+      {"screen": "Leaderboard row", "issues": ["leaderboard-watch-N is a 32x32 visual. hitSlop 6 brings it to 44, which is OK but tight next to the score."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_daily_leaderboard.py", "/app/test_reports/pytest/pytest_daily_iter4.xml"],
+  "action_items": [
+    "Fix findReplayCode so the full shared message pasted into home-replay-input works (decodeURIComponent, or try all SR1 matches).",
+    "Make the POST /api/daily/{date}/scores upsert atomic, or handle DuplicateKeyError, to avoid a 500 on concurrent first submits.",
+    "Daily victory title: don't use the isLast 'Starport Legend!' for daily runs.",
+    "Daily View Leaderboard: avoid router.replace('/daily'), which stacks a duplicate daily screen.",
+    "Replay title truncation at 375 width: the combo count gets cut off."
+  ],
+  "critical_code_review_comments": [
+    "Replay combo count and handle come straight from the code and are not verified against the moves, so a code can claim any 'COMBO ×N'. Consider computing the combo while replaying.",
+    "/game?level=N has no unlock check (deep links bypass locks). This is pre-existing and may be intentional.",
+    "The backend leaves a 'handle' rename on a worse score (it updates handle and updated_at). Fine, just noting it."
+  ],
+  "updated_files": ["/app/backend/tests/test_daily_leaderboard.py (new)"],
+  "success_rate": {"backend": "100% (23/23); 1 minor race found separately", "frontend": "~90% (1 functional paste bug, 2 minor nav/title bugs)"},
+  "seed_data_creation": "None kept. Test docs (device_id test-*) were removed by the fixture, and the single UI-created daily score (handle SassyQuark95) was deleted after the run.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Today's UTC key in this container was 2026-10-31; daily solution via node daily.js. Ship testIDs are ship-<id>; tap every 2.6s. On headless web, navigator.share is undefined, so the share-replay button copies to clipboard and shows 'Replay code copied to clipboard' in game-toast. Settings is opened from the game via control-settings-button. The browser_automation tool mangles screenshot paths with f-strings/brackets; use plain filenames.",
+  "rca_of_issue": "Paste bug: game.tsx shareReplay builds msg = 'Open: ' + Linking.createURL('/replay', {queryParams:{code}}) + ' ... ' + code. createURL percent-encodes '~' as %7E. findReplayCode uses text.match(/SR1\\.[^\\s]+/), which returns the first (encoded) match, and decodeReplay's move regex /^[a-z]+-\\d{2}$/ fails on 'cyan-01%7Eyellow-01'. Repro: copy the message from victory-share-replay-button, paste it into home-replay-input, tap watch, and home-replay-error appears."
+}

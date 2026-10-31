@@ -15,12 +15,13 @@ export interface Prefs {
   haptics: boolean;
   stars: Record<number, number>; // best stars per level
   diag: Record<DiagKey, number>;
+  deviceId: string; // random, local only: lets the leaderboard keep one best score per device
   handle: string; // auto-generated funny default, player can change it
   hat: HatId;
   trail: TrailId;
 }
 
-const MAX_LEVEL_STORED = 15;
+const MAX_LEVEL_STORED = 30;
 let prefs: Prefs = {
   loaded: false,
   music: true,
@@ -29,6 +30,7 @@ let prefs: Prefs = {
   stars: {},
   diag: Object.fromEntries(DIAG_KEYS.map((k) => [k, 0])) as Record<DiagKey, number>,
   handle: "",
+  deviceId: "",
   hat: "none",
   trail: "none",
 };
@@ -74,8 +76,13 @@ export async function loadPrefs() {
     storage.setItem("sr_handle", handle);
   }
   const hat = ((await storage.getItem("sr_hat", "none")) ?? "none") as HatId;
+  let deviceId: string = (await storage.getItem("sr_device", "")) ?? "";
+  if (!deviceId) {
+    deviceId = `d-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+    storage.setItem("sr_device", deviceId);
+  }
   const trail = ((await storage.getItem("sr_trail", "none")) ?? "none") as TrailId;
-  set({ loaded: true, music: music ?? true, sfx: sfx ?? true, haptics: haptics ?? true, stars, diag, handle, hat, trail });
+  set({ loaded: true, music: music ?? true, sfx: sfx ?? true, haptics: haptics ?? true, stars, diag, handle, hat, trail, deviceId });
 }
 
 export function setToggle(key: "music" | "sfx" | "haptics", value: boolean) {

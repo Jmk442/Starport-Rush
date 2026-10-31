@@ -78,4 +78,32 @@ for i in range(n):
     hat = random.uniform(-1, 1) * math.exp(-((t + beat / 2) % beat) * 60) * 0.05
     music.append((bass + a + hat) * 0.9)
 write("music.wav", music)
+
+
+# Sector loops (Round 4): each themed pack gets its own original track.
+def loop(name, bpm, prog, lead, bass_fn, drum, seed):
+    beat = 60 / bpm; n = int(SR * 16 * beat); out = []
+    random.seed(seed)
+    for i in range(n):
+        t = i / SR; bar = int(t // (4 * beat)) % 4; root, arp = prog[bar]
+        tb = t % beat; t16 = t % (beat / 4); idx = int(t // (beat / 4)) % 8
+        b = bass_fn(2 * math.pi * root * t) * math.exp(-tb * 4) * 0.33
+        f = arp[idx % len(arp)] * (2 if idx >= 6 else 1)
+        a = lead(2 * math.pi * f * t) * math.exp(-t16 * 14) * 0.15
+        d = drum(t, beat)
+        out.append((b + a + d) * 0.9)
+    write(name, out)
+
+sq = lambda p: 0.6 * (1 if math.sin(p) >= 0 else -1) + 0.4 * math.sin(p)
+saw = lambda p: ((p / (2 * math.pi)) % 1) * 2 - 1
+bell = lambda p: math.sin(p) + 0.4 * math.sin(2.76 * p) + 0.2 * math.sin(5.4 * p)
+# Lava Moon: heavy 100bpm minor stomp with tom hits
+loop("music_lava.wav", 100, [(110.0, [220, 261.6, 329.6]), (98.0, [196, 246.9, 293.7]), (87.3, [174.6, 220, 261.6]), (103.8, [207.7, 246.9, 311.1])],
+     tri, sq, lambda t, b: math.sin(2 * math.pi * (90 - 40 * (t % b)) * t) * math.exp(-(t % b) * 14) * 0.25, 11)
+# Ice Nebula: airy 90bpm bells over soft pads
+loop("music_ice.wav", 90, [(146.8, [587.3, 740, 880, 1174.7]), (123.5, [493.9, 622.3, 740, 987.8]), (130.8, [523.3, 659.3, 784, 1046.5]), (110.0, [440, 554.4, 659.3, 880])],
+     bell, math.sin, lambda t, b: random.uniform(-1, 1) * math.exp(-((t + b / 2) % b) * 80) * 0.03, 12)
+# Neon Bazaar: 128bpm synthwave arps with a clap on 2 & 4
+loop("music_neon.wav", 128, [(130.8, [523.3, 659.3, 784]), (116.5, [466.2, 587.3, 698.5]), (103.8, [415.3, 523.3, 622.3]), (98.0, [392, 493.9, 587.3])],
+     saw, tri, lambda t, b: random.uniform(-1, 1) * math.exp(-((t + b) % (2 * b)) * 30) * 0.09, 13)
 print("ok")

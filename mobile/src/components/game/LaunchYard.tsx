@@ -13,10 +13,12 @@ interface Props {
   hintId: string | null;
   blocked: BlockedFx | null;
   combo: ComboFx | null;
+  floor?: string; // sector theme colours (from theme tokens)
+  cellColor?: string;
   onTap: (id: string) => void;
 }
 
-export function LaunchYard({ state, cell, hintId, blocked, combo, onTap }: Props) {
+export function LaunchYard({ state, cell, hintId, blocked, combo, floor, cellColor, onTap }: Props) {
   const styles = useStyles();
   const { width, height } = state.board;
   const shake = useSharedValue(0);
@@ -29,10 +31,10 @@ export function LaunchYard({ state, cell, hintId, blocked, combo, onTap }: Props
   return (
     <View testID="launch-yard" style={styles.frame}>
       <Text style={styles.label}>LAUNCH YARD</Text>
-      <Animated.View style={[styles.board, { width: width * cell, height: height * cell }, shakeAnim]}>
+      <Animated.View style={[styles.board, { width: width * cell, height: height * cell }, floor ? { backgroundColor: floor } : null, shakeAnim]}>
         {Array.from({ length: width * height }, (_, i) => (
           <View key={i} style={[styles.cell, { left: (i % width) * cell, top: Math.floor(i / width) * cell, width: cell, height: cell }]}>
-            <View style={styles.cellInner} />
+            <View style={[styles.cellInner, cellColor ? { backgroundColor: cellColor } : null]} />
           </View>
         ))}
         {state.ships.map((s) => (

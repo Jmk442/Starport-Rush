@@ -50,3 +50,11 @@ User's words:
 Bug: on a real iPhone in Expo Go, the background music stopped suddenly while playing level 3 (music setting was on). Expected: music keeps looping across levels and screens. Reproduce first, fix, re-verify.
 Feel: when clearing (ship departure / level clear), hold about one second longer so the graphics can be seen before moving on.
 Handle detail (user's words): "auto-generated funny one like 'SneakyGlorp42' unchangeable if you want. Choose your own if you want." (Auto-generate a funny handle by default; the player may keep it or choose their own.)
+
+## Round 4
+User's words:
+"Daily Challenge: Add a daily puzzle with a leaderboard of player handles so friends can compete"
+"Level Packs: Add 15 more levels in themed sectors, each with its own look and music"
+"iPhone Fixes: Fix any feel or layout problems you find while playing the new levels on your phone"
+"Combo Replays: Let players share a short replay of their best combo"
+Decisions: user chose both "Keep it offline: daily puzzle with a shareable score card only" and "Add a simple online leaderboard". Combined: the daily puzzle is playable offline and has a shareable score card; scores are also posted to a simple online leaderboard of player handles when online (no login, handle only; this is the one approved exception to the no-backend rule). Replay format: builder's choice. iPhone fixes: no specifics given, so do a general layout and feel check on the new levels.

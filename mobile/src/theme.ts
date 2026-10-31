@@ -69,6 +69,24 @@ const light = {
   borderStrong: "#455A64",
   divider: "#1F2833",
 
+  // Sector themes (Round 4): yard floor / cell / accent / sky glow per pack
+  primeFloor: "#121821",
+  primeCell: "#18202B",
+  primeAccent: "#00FFFF",
+  primeSky: "#0E2A3A",
+  lavaFloor: "#1E0F0C",
+  lavaCell: "#2B1510",
+  lavaAccent: "#FF6A2B",
+  lavaSky: "#4A140A",
+  iceFloor: "#0D1824",
+  iceCell: "#142638",
+  iceAccent: "#9BE7FF",
+  iceSky: "#1F6A94",
+  neonFloor: "#140C22",
+  neonCell: "#1F1233",
+  neonAccent: "#FF2BD6",
+  neonSky: "#3A0F4F",
+
   // Game entities (ships + aliens). Must match engine AlienColor keys.
   cyan: "#00FFFF",
   yellow: "#FFD700",

@@ -1,7 +1,10 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
+import * as Clipboard from "expo-clipboard";
+import { LinearGradient } from "expo-linear-gradient";
+import * as Linking from "expo-linking";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, Text, useWindowDimensions, View } from "react-native";
+import { Pressable, Share, Text, useWindowDimensions, View } from "react-native";
 import Animated, { ZoomIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -16,23 +19,31 @@ import { ResultOverlay } from "@/src/components/game/ResultOverlay";
 import { SettingsSheet } from "@/src/components/SettingsSheet";
 import { Starfield } from "@/src/components/Starfield";
 import { newlyUnlocked, totalStars } from "@/src/game/cosmetics";
+import { dailyLevel, dailyScore } from "@/src/game/daily";
 import { getLevel, LEVEL_1, LEVELS } from "@/src/game/levels";
+import { encodeReplay } from "@/src/game/replay";
+import { DAILY_SECTOR, sectorFor } from "@/src/game/sectors";
 import type { LevelDef } from "@/src/game/types";
 import { starsFor, useGameSession } from "@/src/game/useGameSession";
 import { COLOR_LABEL } from "@/src/game/visuals";
+import { setMusicTrack } from "@/src/services/audio";
+import { saveLocal, syncDaily } from "@/src/services/leaderboard";
 import { getPrefs, recordStars, usePrefs } from "@/src/services/prefs";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
 
 export default function GameScreen() {
-  const params = useLocalSearchParams<{ level?: string }>();
-  const level = useMemo(() => getLevel(Number(params.level ?? 1)) ?? LEVEL_1, [params.level]);
+  const params = useLocalSearchParams<{ level?: string; daily?: string }>();
+  const level = useMemo(
+    () => (params.daily ? dailyLevel(params.daily) : (getLevel(Number(params.level ?? 1)) ?? LEVEL_1)),
+    [params.level, params.daily],
+  );
   // keyed so switching level resets the whole session
-  return <GameBody key={level.levelId} level={level} />;
+  return <GameBody key={params.daily ?? level.levelId} level={level} daily={params.daily} />;
 }
 
 const PARTY: ("cyan" | "pink" | "yellow" | "green")[] = ["cyan", "pink", "yellow", "green"];
 
-function GameBody({ level }: { level: LevelDef }) {
+function GameBody({ level, daily }: { level: LevelDef; daily?: string }) {
   const styles = useStyles();
   const { colors } = useTheme();
   const router = useRouter();
@@ -42,23 +53,59 @@ function GameBody({ level }: { level: LevelDef }) {
   const { display } = session;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shareData, setShareData] = useState<ShareData | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [dailyInfo, setDailyInfo] = useState<{ score: number; best: boolean; sync: string } | null>(null);
   const prefs = usePrefs();
-  const isLast = level.levelId >= LEVELS[LEVELS.length - 1].levelId;
+  const sector = daily ? DAILY_SECTOR : sectorFor(level.levelId);
+  useEffect(() => setMusicTrack(sector.music), [sector.music]);
+  const isLast = !daily && level.levelId >= LEVELS[LEVELS.length - 1].levelId;
   const goNext = () => {
-    if (isLast) router.dismissTo({ pathname: "/", params: { stage: "complete" } });
+    if (daily) router.dismissTo("/daily");
+    else if (isLast) router.dismissTo({ pathname: "/", params: { stage: "complete" } });
     else router.setParams({ level: String(level.levelId + 1) });
   };
   const baysFull = display.bays.every((b) => b !== null);
 
+  const replayCode = () => {
+    const r = session.comboReplay();
+    if (r.count < 2) return null;
+    return encodeReplay({ levelRef: daily ? `d${daily}` : String(level.levelId), fromMove: r.from, combo: r.count, handle: prefs.handle, moves: r.moves });
+  };
+  const shareReplay = async () => {
+    const code = replayCode();
+    if (!code) return;
+    const link = Linking.createURL("/replay", { queryParams: { code } });
+    const msg = `Watch my COMBO ×${session.bestCombo} in Starport Rush! 🚀\nOpen: ${link}\nor paste this code in "Watch a replay": ${code}`;
+    try {
+      await Share.share({ message: msg });
+      setToast("Replay shared!");
+    } catch {
+      await Clipboard.setStringAsync(msg).catch(() => {});
+      setToast("Replay code copied to clipboard");
+    }
+  };
 
   const stars = display.status === "WON" ? starsFor(display) : 0;
   const [unlocks, setUnlocks] = useState<string[]>([]);
   useEffect(() => {
     if (display.status !== "WON") return;
+    if (daily) {
+      const seconds = Math.max(1, Math.round(session.elapsedMs() / 1000));
+      const score = dailyScore({ moves: display.moves, undos: display.undos, seconds, bestCombo: session.bestCombo });
+      const result = { score, seconds, undos: display.undos, bestCombo: session.bestCombo, moves: display.moves, replayCode: replayCode() };
+      setDailyInfo({ score, best: false, sync: "saving" });
+      saveLocal(daily, result).then(async (best) => {
+        setDailyInfo({ score, best, sync: "posting" });
+        const s = await syncDaily(daily);
+        setDailyInfo({ score, best, sync: s === "offline" ? "offline" : best ? "posted" : "kept" });
+      });
+      return;
+    }
     const before = totalStars(getPrefs().stars);
     recordStars(level.levelId, stars);
     setUnlocks(newlyUnlocked(before, totalStars(getPrefs().stars)).map((c) => c.name));
-  }, [display.status, stars, level.levelId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [display.status, stars, level.levelId, daily]);
   const won = display.status === "WON";
 
   // Portrait split: 30% queue, 15% docks, 45% yard, 10% controls (safe-area aware).
@@ -74,6 +121,7 @@ function GameBody({ level }: { level: LevelDef }) {
   return (
     <View style={styles.root} testID="game-screen">
       <Starfield />
+      <LinearGradient colors={[colors[sector.sky], "transparent"]} locations={[0, 0.45]} style={styles.sky} pointerEvents="none" />
       <View style={{ paddingTop: insets.top, paddingBottom: insets.bottom, flex: 1 }}>
         <View style={{ height: queueH }}>
           <View style={styles.topBar}>
@@ -81,7 +129,9 @@ function GameBody({ level }: { level: LevelDef }) {
               <Ionicons name="chevron-back" size={22} color={colors.onSurface} />
             </Pressable>
             <View style={styles.titleWrap}>
-              <Text style={styles.levelNum}>LEVEL {level.levelId}</Text>
+              <Text style={[styles.levelNum, { color: colors[sector.accent] }]} numberOfLines={1} testID="game-sector-name">
+                {daily ? `DAILY · ${daily}` : `${sector.name.toUpperCase()} · LEVEL ${level.levelId}`}
+              </Text>
               <Text style={styles.levelName} testID="game-level-name" numberOfLines={1}>
                 {level.name}
               </Text>
@@ -103,6 +153,8 @@ function GameBody({ level }: { level: LevelDef }) {
             hintId={session.hintId}
             blocked={session.blocked}
             combo={session.combo}
+            floor={colors[sector.floor]}
+            cellColor={colors[sector.cell]}
             onTap={(id) => session.dispatch({ type: "TAP_SHIP", shipId: id })}
           />
           <ComboPopup combo={session.combo} />
@@ -126,29 +178,48 @@ function GameBody({ level }: { level: LevelDef }) {
       {won && session.resultReady && (
         <ResultOverlay
           kind="victory"
-          title={isLast ? "Starport Legend!" : "Launch Complete!"}
+          title={daily ? "Daily Cleared!" : isLast ? "Starport Legend!" : "Launch Complete!"}
           message={`Cleared in ${display.moves} moves${display.undos ? ` with ${display.undos} undo${display.undos > 1 ? "s" : ""}` : ""}${session.bestCombo >= 2 ? ` · best combo ×${session.bestCombo}` : ""}.`}
           stars={stars}
           actions={[
-            { id: "next", label: isLast ? "All Sectors Cleared" : `Next Level (${level.levelId + 1})`, primary: true, onPress: goNext },
+            daily
+              ? { id: "leaderboard", label: "View Leaderboard", primary: true, onPress: goNext }
+              : { id: "next", label: isLast ? "All Sectors Cleared" : `Next Level (${level.levelId + 1})`, primary: true, onPress: goNext },
             {
               id: "share",
               label: "Share Score",
               onPress: () =>
                 setShareData({
                   levelId: level.levelId,
-                  levelName: level.name,
+                  levelName: daily ? `Daily ${daily}` : level.name,
                   moves: display.moves,
                   stars,
                   bestCombo: session.bestCombo,
                   seconds: Math.round(session.elapsedMs() / 1000),
                   handle: prefs.handle,
                   hat: prefs.hat,
+                  score: dailyInfo?.score,
                 }),
             },
-            { id: "replay", label: "Replay", onPress: () => session.dispatch({ type: "RESTART" }) },
+            ...(session.bestCombo >= 2 ? [{ id: "share-replay", label: `Share Combo ×${session.bestCombo} Replay`, onPress: shareReplay }] : []),
+            ...(daily ? [] : [{ id: "replay", label: "Replay", onPress: () => session.dispatch({ type: "RESTART" }) }]),
           ]}
         >
+          {dailyInfo && (
+            <View style={styles.dailyBox} testID="victory-daily-score">
+              <Text style={styles.dailyScore}>{dailyInfo.score} pts</Text>
+              <Text style={styles.dailySync} testID="victory-daily-sync">
+                {dailyInfo.best ? "New personal best! " : "Your best today is kept. "}
+                {dailyInfo.sync === "offline"
+                  ? "Offline: saved, will post to the leaderboard later."
+                  : dailyInfo.sync === "posted"
+                    ? "Posted to the leaderboard."
+                    : dailyInfo.sync === "kept"
+                      ? ""
+                      : "Saving…"}
+              </Text>
+            </View>
+          )}
           <View style={styles.party}>
             {PARTY.map((c, i) => (
               <View key={c} style={{ transform: [{ translateY: i % 2 ? -8 : 0 }, { rotate: `${(i - 1.5) * 10}deg` }] }}>
@@ -183,12 +254,23 @@ function GameBody({ level }: { level: LevelDef }) {
         />
       )}
       <SettingsSheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      {toast && (
+        <Pressable testID="game-toast" onPress={() => setToast(null)} style={[styles.toast, { bottom: insets.bottom + 24 }]}>
+          <Text style={styles.toastText}>{toast}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
 
 const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surface },
+  sky: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
+  dailyBox: { alignItems: "center", marginTop: 12 },
+  dailyScore: { fontFamily: fonts.display, fontSize: 28, color: c.yellow },
+  dailySync: { fontFamily: fonts.text, fontSize: 12, color: c.onSurfaceSecondary, textAlign: "center", marginTop: 2 },
+  toast: { position: "absolute", left: 24, right: 24, backgroundColor: c.surfaceInverse, borderRadius: radius.md, padding: 12, alignItems: "center" },
+  toastText: { fontFamily: fonts.display, fontSize: 14, color: c.onSurfaceInverse },
   party: { flexDirection: "row", gap: 8, marginTop: 16, alignItems: "flex-end" },
   unlock: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12, backgroundColor: c.surfaceTertiary, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8, alignSelf: "stretch" },
   unlockText: { flex: 1, fontFamily: fonts.text, fontSize: 13, color: c.onSurface },

@@ -36,6 +36,12 @@ Expo app requirement: /app/memory/product/requirements.md (+ full_spec.md). Prem
 - Feel: departures 600 ms, "SECTOR CLEAR!" hold 1.1 s before victory, jam hold 0.6 s
 - Testing agent iteration_3: all flows passed. Fixed afterwards: settings sheet scrollable on SE, +N badge given its own slot, hangar names wrap, unlock message grammar
 
+## Round 4 (2026-09)
+- Daily Challenge: a deterministic puzzle per UTC date is generated on the device (src/game/daily.ts, shared generator in src/game/generator.ts), so it works offline. Scores (combo/undo/time based) are saved locally first, then posted to the online leaderboard (FastAPI /api/daily/{date}/scores + /leaderboard; handle + random device id, no login, best score per device kept atomically). Unsynced scores retry when the Daily screen opens.
+- Sector packs: Levels 16-30 = Lava Moon / Ice Nebula / Neon Bazaar. Each has its own theme tokens (yard floor, cells, accent, sky glow) and its own original music loop (music_lava/ice/neon.wav); the track switches per sector. Each pack's difficulty ramps on its own (tests/generate_sectors.ts).
+- Combo replays: deterministic SR1 replay code (level + tap list + combo window + handle), shared as a deep link /replay?code=… plus pasteable text. The replay screen re-runs the real engine with the real components. Leaderboard rows with a code get a Watch button.
+- Tests: engine 101/101, daily/replay all pass, backend pytest 25/25; testing agent iterations 4-5 passed after fixes (full-message paste, insert race, daily title, nav stack, replay title, ice glow, atomic better-score write).
+
 ## Backlog
 - P1: on-device check of haptics, pitch-rising audio and the image share card in Expo Go on iPhone; frame-rate profiling
 - P1: Levels 6+ (generator in tests/generate_levels.ts already supports specs)

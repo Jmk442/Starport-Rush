@@ -199,3 +199,212 @@ Winning play paths: 2/918 (0.2%)
 10. tap pink-01: DISPATCH(pink-01@bay1), DOCK(pink-01@bay1), QUEUE_ADVANCE(pink), QUEUE_ADVANCE(yellow), DEPART(yellow-01@bay3), QUEUE_ADVANCE(green), DEPART(green-02@bay2) [7 aliens boarded]
 11. tap blue-01: DISPATCH(blue-01@bay2), DOCK(blue-01@bay2), QUEUE_ADVANCE(blue), QUEUE_ADVANCE(cyan), DEPART(cyan-01@bay4), QUEUE_ADVANCE(blue), DEPART(blue-01@bay2), QUEUE_ADVANCE(pink), DEPART(pink-01@bay1), WIN [14 aliens boarded]
 Final status: WON
+
+## Level 16 "Magma Merge" (7x7, 3 bays, 7 ships)
+BFS shortest solution: green-01 -> yellow-02 -> orange-01 -> yellow-01 -> pink-01 -> cyan-01 -> pink-02 | matches expectedSolution: true
+Winning play paths: 3/66 (4.5%)
+1. tap green-01: DISPATCH(green-01@bay1), DOCK(green-01@bay1) [0 aliens boarded]
+2. tap yellow-02: DISPATCH(yellow-02@bay2), DOCK(yellow-02@bay2), QUEUE_ADVANCE(yellow), QUEUE_ADVANCE(green), DEPART(yellow-02@bay2) [7 aliens boarded]
+3. tap orange-01: DISPATCH(orange-01@bay2), DOCK(orange-01@bay2) [0 aliens boarded]
+4. tap yellow-01: DISPATCH(yellow-01@bay3), DOCK(yellow-01@bay3), QUEUE_ADVANCE(yellow), QUEUE_ADVANCE(green), DEPART(green-01@bay1) [7 aliens boarded]
+5. tap pink-01: DISPATCH(pink-01@bay1), DOCK(pink-01@bay1), QUEUE_ADVANCE(pink), DEPART(pink-01@bay1), QUEUE_ADVANCE(orange) [8 aliens boarded]
+6. tap cyan-01: DISPATCH(cyan-01@bay1), DOCK(cyan-01@bay1), QUEUE_ADVANCE(cyan), DEPART(cyan-01@bay1) [4 aliens boarded]
+7. tap pink-02: DISPATCH(pink-02@bay1), DOCK(pink-02@bay1), QUEUE_ADVANCE(pink), QUEUE_ADVANCE(yellow), DEPART(yellow-01@bay3), QUEUE_ADVANCE(orange), DEPART(orange-01@bay2), QUEUE_ADVANCE(pink), DEPART(pink-02@bay1), WIN [10 aliens boarded]
+Final status: WON
+
+## Level 17 "Cinder Circuit" (7x7, 3 bays, 8 ships)
+BFS shortest solution: pink-01 -> green-01 -> orange-01 -> yellow-01 -> green-02 -> cyan-01 -> orange-02 -> pink-02 | matches expectedSolution: true
+Winning play paths: 4/116 (3.4%)
+1. tap pink-01: DISPATCH(pink-01@bay1), DOCK(pink-01@bay1) [0 aliens boarded]
+2. tap green-01: DISPATCH(green-01@bay2), DOCK(green-01@bay2) [0 aliens boarded]
+3. tap orange-01: DISPATCH(orange-01@bay3), DOCK(orange-01@bay3), QUEUE_ADVANCE(orange), QUEUE_ADVANCE(green), QUEUE_ADVANCE(pink), QUEUE_ADVANCE(orange), DEPART(orange-01@bay3) [13 aliens boarded]
+4. tap yellow-01: DISPATCH(yellow-01@bay3), DOCK(yellow-01@bay3), QUEUE_ADVANCE(yellow), QUEUE_ADVANCE(green), QUEUE_ADVANCE(pink), DEPART(green-01@bay2) [7 aliens boarded]
+5. tap green-02: DISPATCH(green-02@bay2), DOCK(green-02@bay2), QUEUE_ADVANCE(green), QUEUE_ADVANCE(yellow), DEPART(yellow-01@bay3) [4 aliens boarded]
+6. tap cyan-01: DISPATCH(cyan-01@bay3), DOCK(cyan-01@bay3), QUEUE_ADVANCE(cyan), QUEUE_ADVANCE(green), DEPART(green-02@bay2) [5 aliens boarded]
+7. tap orange-02: DISPATCH(orange-02@bay2), DOCK(orange-02@bay2), QUEUE_ADVANCE(orange), DEPART(pink-01@bay1) [4 aliens boarded]
+8. tap pink-02: DISPATCH(pink-02@bay1), DOCK(pink-02@bay1), QUEUE_ADVANCE(pink), QUEUE_ADVANCE(cyan), DEPART(cyan-01@bay3), QUEUE_ADVANCE(pink), DEPART(pink-02@bay1), QUEUE_ADVANCE(orange), DEPART(orange-02@bay2), WIN [7 aliens boarded]
+Final status: WON
+
+## Level 18 "Ember Exit" (7x7, 3 bays, 8 ships)
+BFS shortest solution: yellow-01 -> orange-01 -> cyan-02 -> green-01 -> cyan-01 -> yellow-02 -> pink-01 -> purple-01 | matches expectedSolution: true
+Winning play paths: 2/77 (2.6%)
+1. tap yellow-01: DISPATCH(yellow-01@bay1), DOCK(yellow-01@bay1), QUEUE_ADVANCE(yellow) [2 aliens boarded]
+2. tap orange-01: DISPATCH(orange-01@bay2), DOCK(orange-01@bay2), QUEUE_ADVANCE(orange), DEPART(orange-01@bay2) [4 aliens boarded]
+3. tap cyan-02: DISPATCH(cyan-02@bay2), DOCK(cyan-02@bay2), QUEUE_ADVANCE(cyan) [3 aliens boarded]
+4. tap green-01: DISPATCH(green-01@bay3), DOCK(green-01@bay3), QUEUE_ADVANCE(green), QUEUE_ADVANCE(yellow), QUEUE_ADVANCE(green), DEPART(cyan-02@bay2) [7 aliens boarded]
+5. tap cyan-01: DISPATCH(cyan-01@bay2), DOCK(cyan-01@bay2), QUEUE_ADVANCE(cyan), DEPART(yellow-01@bay1) [4 aliens boarded]
+6. tap yellow-02: DISPATCH(yellow-02@bay1), DOCK(yellow-02@bay1), QUEUE_ADVANCE(yellow), QUEUE_ADVANCE(cyan), QUEUE_ADVANCE(yellow), DEPART(yellow-02@bay1), QUEUE_ADVANCE(cyan), DEPART(cyan-01@bay2) [10 aliens boarded]
+7. tap pink-01: DISPATCH(pink-01@bay1), DOCK(pink-01@bay1), QUEUE_ADVANCE(pink) [2 aliens boarded]
+8. tap purple-01: DISPATCH(purple-01@bay2), DOCK(purple-01@bay2), QUEUE_ADVANCE(purple), DEPART(purple-01@bay2), QUEUE_ADVANCE(green), DEPART(green-01@bay3), QUEUE_ADVANCE(pink), DEPART(pink-01@bay1), WIN [10 aliens boarded]
+Final status: WON
+
+## Level 19 "Obsidian Overpass" (7x7, 3 bays, 9 ships)
+BFS shortest solution: pink-01 -> green-02 -> cyan-01 -> orange-01 -> yellow-01 -> purple-01 -> pink-02 -> green-01 -> yellow-02 | matches expectedSolution: true
+Winning play paths: 6/288 (2.1%)
+1. tap pink-01: DISPATCH(pink-01@bay1), DOCK(pink-01@bay1), QUEUE_ADVANCE(pink) [4 aliens boarded]
+2. tap green-02: DISPATCH(green-02@bay2), DOCK(green-02@bay2), QUEUE_ADVANCE(green), DEPART(green-02@bay2) [4 aliens boarded]
+3. tap cyan-01: DISPATCH(cyan-01@bay2), DOCK(cyan-01@bay2) [0 aliens boarded]
+4. tap orange-01: DISPATCH(orange-01@bay3), DOCK(orange-01@bay3), QUEUE_ADVANCE(orange), QUEUE_ADVANCE(pink), DEPART(pink-01@bay1) [4 aliens boarded]
+5. tap yellow-01: DISPATCH(yellow-01@bay1), DOCK(yellow-01@bay1), QUEUE_ADVANCE(yellow), QUEUE_ADVANCE(orange), DEPART(orange-01@bay3), QUEUE_ADVANCE(yellow) [6 aliens boarded]
+6. tap purple-01: DISPATCH(purple-01@bay3), DOCK(purple-01@bay3), QUEUE_ADVANCE(purple), QUEUE_ADVANCE(yellow), DEPART(yellow-01@bay1) [7 aliens boarded]
+7. tap pink-02: DISPATCH(pink-02@bay1), DOCK(pink-02@bay1), QUEUE_ADVANCE(pink), DEPART(pink-02@bay1), QUEUE_ADVANCE(cyan), DEPART(cyan-01@bay2) [8 aliens boarded]
+8. tap green-01: DISPATCH(green-01@bay1), DOCK(green-01@bay1), QUEUE_ADVANCE(green), QUEUE_ADVANCE(purple), DEPART(purple-01@bay3) [3 aliens boarded]
+9. tap yellow-02: DISPATCH(yellow-02@bay2), DOCK(yellow-02@bay2), QUEUE_ADVANCE(yellow), DEPART(yellow-02@bay2), QUEUE_ADVANCE(green), DEPART(green-01@bay1), WIN [8 aliens boarded]
+Final status: WON
+
+## Level 20 "Eruption Express" (7x7, 4 bays, 9 ships)
+BFS shortest solution: yellow-01 -> pink-01 -> purple-01 -> cyan-02 -> orange-01 -> cyan-01 -> green-01 -> yellow-02 -> pink-02 | matches expectedSolution: true
+Winning play paths: 8/607 (1.3%)
+1. tap yellow-01: DISPATCH(yellow-01@bay1), DOCK(yellow-01@bay1) [0 aliens boarded]
+2. tap pink-01: DISPATCH(pink-01@bay2), DOCK(pink-01@bay2) [0 aliens boarded]
+3. tap purple-01: DISPATCH(purple-01@bay3), DOCK(purple-01@bay3), QUEUE_ADVANCE(purple), DEPART(purple-01@bay3) [4 aliens boarded]
+4. tap cyan-02: DISPATCH(cyan-02@bay3), DOCK(cyan-02@bay3), QUEUE_ADVANCE(cyan) [3 aliens boarded]
+5. tap orange-01: DISPATCH(orange-01@bay4), DOCK(orange-01@bay4), QUEUE_ADVANCE(orange), DEPART(orange-01@bay4), QUEUE_ADVANCE(yellow), QUEUE_ADVANCE(pink), DEPART(cyan-02@bay3) [13 aliens boarded]
+6. tap cyan-01: DISPATCH(cyan-01@bay3), DOCK(cyan-01@bay3), QUEUE_ADVANCE(cyan) [3 aliens boarded]
+7. tap green-01: DISPATCH(green-01@bay4), DOCK(green-01@bay4), QUEUE_ADVANCE(green), DEPART(yellow-01@bay1) [8 aliens boarded]
+8. tap yellow-02: DISPATCH(yellow-02@bay1), DOCK(yellow-02@bay1), QUEUE_ADVANCE(yellow), QUEUE_ADVANCE(cyan), DEPART(cyan-01@bay3), DEPART(pink-01@bay2) [10 aliens boarded]
+9. tap pink-02: DISPATCH(pink-02@bay2), DOCK(pink-02@bay2), QUEUE_ADVANCE(pink), DEPART(pink-02@bay2), QUEUE_ADVANCE(green), DEPART(green-01@bay4), QUEUE_ADVANCE(yellow), DEPART(yellow-02@bay1), WIN [7 aliens boarded]
+Final status: WON
+
+## Level 21 "Frostbite Ferry" (7x7, 4 bays, 8 ships)
+BFS shortest solution: green-01 -> green-02 -> purple-01 -> orange-02 -> pink-01 -> orange-01 -> cyan-01 -> yellow-01 | matches expectedSolution: true
+Winning play paths: 4/114 (3.5%)
+1. tap green-01: DISPATCH(green-01@bay1), DOCK(green-01@bay1) [0 aliens boarded]
+2. tap green-02: DISPATCH(green-02@bay2), DOCK(green-02@bay2) [0 aliens boarded]
+3. tap purple-01: DISPATCH(purple-01@bay3), DOCK(purple-01@bay3) [0 aliens boarded]
+4. tap orange-02: DISPATCH(orange-02@bay4), DOCK(orange-02@bay4), QUEUE_ADVANCE(orange), QUEUE_ADVANCE(green), QUEUE_ADVANCE(purple), DEPART(purple-01@bay3), DEPART(orange-02@bay4) [14 aliens boarded]
+5. tap pink-01: DISPATCH(pink-01@bay3), DOCK(pink-01@bay3) [0 aliens boarded]
+6. tap orange-01: DISPATCH(orange-01@bay4), DOCK(orange-01@bay4), QUEUE_ADVANCE(orange), DEPART(green-01@bay1), QUEUE_ADVANCE(green) [8 aliens boarded]
+7. tap cyan-01: DISPATCH(cyan-01@bay1), DOCK(cyan-01@bay1), QUEUE_ADVANCE(cyan), DEPART(cyan-01@bay1), QUEUE_ADVANCE(orange) [5 aliens boarded]
+8. tap yellow-01: DISPATCH(yellow-01@bay1), DOCK(yellow-01@bay1), QUEUE_ADVANCE(yellow), QUEUE_ADVANCE(pink), DEPART(pink-01@bay3), QUEUE_ADVANCE(yellow), DEPART(yellow-01@bay1), QUEUE_ADVANCE(orange), DEPART(orange-01@bay4), QUEUE_ADVANCE(green), DEPART(green-02@bay2), WIN [13 aliens boarded]
+Final status: WON
+
+## Level 22 "Glacier Gate" (7x7, 4 bays, 8 ships)
+BFS shortest solution: yellow-01 -> purple-01 -> pink-01 -> green-01 -> orange-01 -> purple-02 -> cyan-01 -> orange-02 | matches expectedSolution: true
+Winning play paths: 3/115 (2.6%)
+1. tap yellow-01: DISPATCH(yellow-01@bay1), DOCK(yellow-01@bay1) [0 aliens boarded]
+2. tap purple-01: DISPATCH(purple-01@bay2), DOCK(purple-01@bay2), QUEUE_ADVANCE(purple), QUEUE_ADVANCE(yellow) [5 aliens boarded]
+3. tap pink-01: DISPATCH(pink-01@bay3), DOCK(pink-01@bay3), QUEUE_ADVANCE(pink), DEPART(pink-01@bay3) [4 aliens boarded]
+4. tap green-01: DISPATCH(green-01@bay3), DOCK(green-01@bay3) [0 aliens boarded]
+5. tap orange-01: DISPATCH(orange-01@bay4), DOCK(orange-01@bay4), QUEUE_ADVANCE(orange), QUEUE_ADVANCE(purple), QUEUE_ADVANCE(orange), DEPART(purple-01@bay2) [7 aliens boarded]
+6. tap purple-02: DISPATCH(purple-02@bay2), DOCK(purple-02@bay2), QUEUE_ADVANCE(purple), QUEUE_ADVANCE(orange), DEPART(orange-01@bay4), QUEUE_ADVANCE(purple), DEPART(purple-02@bay2), QUEUE_ADVANCE(green), DEPART(green-01@bay3) [12 aliens boarded]
+7. tap cyan-01: DISPATCH(cyan-01@bay2), DOCK(cyan-01@bay2) [0 aliens boarded]
+8. tap orange-02: DISPATCH(orange-02@bay3), DOCK(orange-02@bay3), QUEUE_ADVANCE(orange), QUEUE_ADVANCE(cyan), QUEUE_ADVANCE(yellow), QUEUE_ADVANCE(orange), DEPART(orange-02@bay3), QUEUE_ADVANCE(yellow), DEPART(yellow-01@bay1), QUEUE_ADVANCE(cyan), DEPART(cyan-01@bay2), WIN [14 aliens boarded]
+Final status: WON
+
+## Level 23 "Snowdrift Shuttle" (7x7, 4 bays, 9 ships)
+BFS shortest solution: green-01 -> orange-01 -> yellow-01 -> blue-01 -> pink-01 -> green-02 -> cyan-01 -> purple-01 -> pink-02 | matches expectedSolution: true
+Winning play paths: 8/447 (1.8%)
+1. tap green-01: DISPATCH(green-01@bay1), DOCK(green-01@bay1) [0 aliens boarded]
+2. tap orange-01: DISPATCH(orange-01@bay2), DOCK(orange-01@bay2) [0 aliens boarded]
+3. tap yellow-01: DISPATCH(yellow-01@bay3), DOCK(yellow-01@bay3) [0 aliens boarded]
+4. tap blue-01: DISPATCH(blue-01@bay4), DOCK(blue-01@bay4), QUEUE_ADVANCE(blue), QUEUE_ADVANCE(green), QUEUE_ADVANCE(blue), DEPART(blue-01@bay4) [6 aliens boarded]
+5. tap pink-01: DISPATCH(pink-01@bay4), DOCK(pink-01@bay4), QUEUE_ADVANCE(pink), DEPART(green-01@bay1) [8 aliens boarded]
+6. tap green-02: DISPATCH(green-02@bay1), DOCK(green-02@bay1), QUEUE_ADVANCE(green), QUEUE_ADVANCE(pink), DEPART(pink-01@bay4) [6 aliens boarded]
+7. tap cyan-01: DISPATCH(cyan-01@bay4), DOCK(cyan-01@bay4), QUEUE_ADVANCE(cyan), DEPART(cyan-01@bay4), QUEUE_ADVANCE(yellow), DEPART(yellow-01@bay3) [8 aliens boarded]
+8. tap purple-01: DISPATCH(purple-01@bay3), DOCK(purple-01@bay3) [0 aliens boarded]
+9. tap pink-02: DISPATCH(pink-02@bay4), DOCK(pink-02@bay4), QUEUE_ADVANCE(pink), QUEUE_ADVANCE(purple), QUEUE_ADVANCE(orange), QUEUE_ADVANCE(green), DEPART(green-02@bay1), QUEUE_ADVANCE(pink), DEPART(pink-02@bay4), QUEUE_ADVANCE(orange), DEPART(orange-01@bay2), QUEUE_ADVANCE(purple), DEPART(purple-01@bay3), WIN [18 aliens boarded]
+Final status: WON
+
+## Level 24 "Permafrost Pileup" (7x7, 4 bays, 9 ships)
+BFS shortest solution: purple-01 -> pink-01 -> green-01 -> cyan-01 -> blue-01 -> yellow-01 -> green-02 -> orange-01 -> orange-02 | matches expectedSolution: true
+Winning play paths: 4/298 (1.3%)
+1. tap purple-01: DISPATCH(purple-01@bay1), DOCK(purple-01@bay1), QUEUE_ADVANCE(purple) [2 aliens boarded]
+2. tap pink-01: DISPATCH(pink-01@bay2), DOCK(pink-01@bay2) [0 aliens boarded]
+3. tap green-01: DISPATCH(green-01@bay3), DOCK(green-01@bay3) [0 aliens boarded]
+4. tap cyan-01: DISPATCH(cyan-01@bay4), DOCK(cyan-01@bay4), QUEUE_ADVANCE(cyan), DEPART(cyan-01@bay4) [4 aliens boarded]
+5. tap blue-01: DISPATCH(blue-01@bay4), DOCK(blue-01@bay4), QUEUE_ADVANCE(blue), QUEUE_ADVANCE(green), QUEUE_ADVANCE(pink), DEPART(pink-01@bay2), QUEUE_ADVANCE(green), QUEUE_ADVANCE(purple), DEPART(green-01@bay3) [17 aliens boarded]
+6. tap yellow-01: DISPATCH(yellow-01@bay2), DOCK(yellow-01@bay2) [0 aliens boarded]
+7. tap green-02: DISPATCH(green-02@bay3), DOCK(green-02@bay3), QUEUE_ADVANCE(green), QUEUE_ADVANCE(yellow), DEPART(yellow-01@bay2), QUEUE_ADVANCE(green), DEPART(green-02@bay3), QUEUE_ADVANCE(blue), DEPART(blue-01@bay4) [11 aliens boarded]
+8. tap orange-01: DISPATCH(orange-01@bay2), DOCK(orange-01@bay2), QUEUE_ADVANCE(orange), QUEUE_ADVANCE(purple), DEPART(purple-01@bay1), DEPART(orange-01@bay2) [10 aliens boarded]
+9. tap orange-02: DISPATCH(orange-02@bay1), DOCK(orange-02@bay1), QUEUE_ADVANCE(orange), DEPART(orange-02@bay1), WIN [4 aliens boarded]
+Final status: WON
+
+## Level 25 "Blizzard Bypass" (7x7, 4 bays, 10 ships)
+BFS shortest solution: blue-01 -> yellow-01 -> purple-01 -> orange-01 -> cyan-01 -> pink-01 -> orange-02 -> purple-02 -> blue-02 -> green-01 | matches expectedSolution: true
+Winning play paths: 12/1695 (0.7%)
+1. tap blue-01: DISPATCH(blue-01@bay1), DOCK(blue-01@bay1) [0 aliens boarded]
+2. tap yellow-01: DISPATCH(yellow-01@bay2), DOCK(yellow-01@bay2), QUEUE_ADVANCE(yellow) [2 aliens boarded]
+3. tap purple-01: DISPATCH(purple-01@bay3), DOCK(purple-01@bay3), QUEUE_ADVANCE(purple), QUEUE_ADVANCE(blue), DEPART(blue-01@bay1) [8 aliens boarded]
+4. tap orange-01: DISPATCH(orange-01@bay1), DOCK(orange-01@bay1), QUEUE_ADVANCE(orange), QUEUE_ADVANCE(yellow), DEPART(yellow-01@bay2) [6 aliens boarded]
+5. tap cyan-01: DISPATCH(cyan-01@bay2), DOCK(cyan-01@bay2) [0 aliens boarded]
+6. tap pink-01: DISPATCH(pink-01@bay4), DOCK(pink-01@bay4), QUEUE_ADVANCE(pink), QUEUE_ADVANCE(cyan), QUEUE_ADVANCE(purple), DEPART(orange-01@bay1) [16 aliens boarded]
+7. tap orange-02: DISPATCH(orange-02@bay1), DOCK(orange-02@bay1), QUEUE_ADVANCE(orange), DEPART(purple-01@bay3) [3 aliens boarded]
+8. tap purple-02: DISPATCH(purple-02@bay3), DOCK(purple-02@bay3), QUEUE_ADVANCE(purple), DEPART(purple-02@bay3) [4 aliens boarded]
+9. tap blue-02: DISPATCH(blue-02@bay3), DOCK(blue-02@bay3), QUEUE_ADVANCE(blue), DEPART(blue-02@bay3), QUEUE_ADVANCE(cyan), DEPART(cyan-01@bay2) [7 aliens boarded]
+10. tap green-01: DISPATCH(green-01@bay2), DOCK(green-01@bay2), QUEUE_ADVANCE(green), DEPART(green-01@bay2), QUEUE_ADVANCE(orange), DEPART(orange-02@bay1), QUEUE_ADVANCE(pink), DEPART(pink-01@bay4), WIN [8 aliens boarded]
+Final status: WON
+
+## Level 26 "Arcade Arrivals" (7x7, 4 bays, 9 ships)
+BFS shortest solution: orange-01 -> blue-02 -> purple-01 -> cyan-01 -> blue-01 -> green-01 -> yellow-01 -> pink-01 -> purple-02 | matches expectedSolution: true
+Winning play paths: 10/401 (2.5%)
+1. tap orange-01: DISPATCH(orange-01@bay1), DOCK(orange-01@bay1) [0 aliens boarded]
+2. tap blue-02: DISPATCH(blue-02@bay2), DOCK(blue-02@bay2) [0 aliens boarded]
+3. tap purple-01: DISPATCH(purple-01@bay3), DOCK(purple-01@bay3), QUEUE_ADVANCE(purple), QUEUE_ADVANCE(blue) [9 aliens boarded]
+4. tap cyan-01: DISPATCH(cyan-01@bay4), DOCK(cyan-01@bay4), QUEUE_ADVANCE(cyan), DEPART(cyan-01@bay4), QUEUE_ADVANCE(purple), DEPART(purple-01@bay3) [7 aliens boarded]
+5. tap blue-01: DISPATCH(blue-01@bay3), DOCK(blue-01@bay3) [0 aliens boarded]
+6. tap green-01: DISPATCH(green-01@bay4), DOCK(green-01@bay4), QUEUE_ADVANCE(green), DEPART(green-01@bay4), QUEUE_ADVANCE(orange), DEPART(orange-01@bay1) [8 aliens boarded]
+7. tap yellow-01: DISPATCH(yellow-01@bay1), DOCK(yellow-01@bay1) [0 aliens boarded]
+8. tap pink-01: DISPATCH(pink-01@bay4), DOCK(pink-01@bay4), QUEUE_ADVANCE(pink), QUEUE_ADVANCE(yellow), QUEUE_ADVANCE(blue), DEPART(blue-02@bay2) [8 aliens boarded]
+9. tap purple-02: DISPATCH(purple-02@bay2), DOCK(purple-02@bay2), QUEUE_ADVANCE(purple), DEPART(purple-02@bay2), QUEUE_ADVANCE(pink), DEPART(pink-01@bay4), QUEUE_ADVANCE(blue), DEPART(blue-01@bay3), QUEUE_ADVANCE(yellow), DEPART(yellow-01@bay1), WIN [14 aliens boarded]
+Final status: WON
+
+## Level 27 "Hologram Hub" (7x7, 4 bays, 9 ships)
+BFS shortest solution: cyan-01 -> pink-01 -> yellow-01 -> orange-01 -> blue-02 -> cyan-02 -> green-01 -> purple-01 -> blue-01 | matches expectedSolution: true
+Winning play paths: 12/663 (1.8%)
+1. tap cyan-01: DISPATCH(cyan-01@bay1), DOCK(cyan-01@bay1), QUEUE_ADVANCE(cyan) [2 aliens boarded]
+2. tap pink-01: DISPATCH(pink-01@bay2), DOCK(pink-01@bay2) [0 aliens boarded]
+3. tap yellow-01: DISPATCH(yellow-01@bay3), DOCK(yellow-01@bay3) [0 aliens boarded]
+4. tap orange-01: DISPATCH(orange-01@bay4), DOCK(orange-01@bay4), QUEUE_ADVANCE(orange), DEPART(orange-01@bay4), QUEUE_ADVANCE(pink), DEPART(cyan-01@bay1) [13 aliens boarded]
+5. tap blue-02: DISPATCH(blue-02@bay1), DOCK(blue-02@bay1) [0 aliens boarded]
+6. tap cyan-02: DISPATCH(cyan-02@bay4), DOCK(cyan-02@bay4), QUEUE_ADVANCE(cyan), QUEUE_ADVANCE(blue), DEPART(blue-02@bay1) [6 aliens boarded]
+7. tap green-01: DISPATCH(green-01@bay1), DOCK(green-01@bay1), QUEUE_ADVANCE(green), DEPART(green-01@bay1) [4 aliens boarded]
+8. tap purple-01: DISPATCH(purple-01@bay1), DOCK(purple-01@bay1), QUEUE_ADVANCE(purple), QUEUE_ADVANCE(pink), DEPART(pink-01@bay2), QUEUE_ADVANCE(purple), DEPART(purple-01@bay1) [7 aliens boarded]
+9. tap blue-01: DISPATCH(blue-01@bay1), DOCK(blue-01@bay1), QUEUE_ADVANCE(blue), QUEUE_ADVANCE(yellow), QUEUE_ADVANCE(blue), DEPART(blue-01@bay1), QUEUE_ADVANCE(yellow), DEPART(yellow-01@bay3), QUEUE_ADVANCE(cyan), DEPART(cyan-02@bay4), WIN [16 aliens boarded]
+Final status: WON
+
+## Level 28 "Synthwave Sorting" (7x7, 4 bays, 10 ships)
+BFS shortest solution: red-01 -> yellow-01 -> purple-01 -> blue-01 -> green-01 -> purple-02 -> orange-02 -> cyan-01 -> orange-01 -> pink-01 | matches expectedSolution: true
+Winning play paths: 4/389 (1.0%)
+1. tap red-01: DISPATCH(red-01@bay1), DOCK(red-01@bay1) [0 aliens boarded]
+2. tap yellow-01: DISPATCH(yellow-01@bay2), DOCK(yellow-01@bay2) [0 aliens boarded]
+3. tap purple-01: DISPATCH(purple-01@bay3), DOCK(purple-01@bay3), QUEUE_ADVANCE(purple), QUEUE_ADVANCE(red) [6 aliens boarded]
+4. tap blue-01: DISPATCH(blue-01@bay4), DOCK(blue-01@bay4), QUEUE_ADVANCE(blue), QUEUE_ADVANCE(purple), DEPART(purple-01@bay3), QUEUE_ADVANCE(blue), DEPART(blue-01@bay4), QUEUE_ADVANCE(red), DEPART(red-01@bay1) [12 aliens boarded]
+5. tap green-01: DISPATCH(green-01@bay1), DOCK(green-01@bay1) [0 aliens boarded]
+6. tap purple-02: DISPATCH(purple-02@bay3), DOCK(purple-02@bay3) [0 aliens boarded]
+7. tap orange-02: DISPATCH(orange-02@bay4), DOCK(orange-02@bay4), QUEUE_ADVANCE(orange), DEPART(orange-02@bay4), QUEUE_ADVANCE(purple), QUEUE_ADVANCE(yellow) [7 aliens boarded]
+8. tap cyan-01: DISPATCH(cyan-01@bay4), DOCK(cyan-01@bay4), QUEUE_ADVANCE(cyan), DEPART(cyan-01@bay4) [4 aliens boarded]
+9. tap orange-01: DISPATCH(orange-01@bay4), DOCK(orange-01@bay4), QUEUE_ADVANCE(orange), QUEUE_ADVANCE(purple), DEPART(purple-02@bay3) [7 aliens boarded]
+10. tap pink-01: DISPATCH(pink-01@bay3), DOCK(pink-01@bay3), QUEUE_ADVANCE(pink), QUEUE_ADVANCE(orange), DEPART(orange-01@bay4), QUEUE_ADVANCE(pink), DEPART(pink-01@bay3), QUEUE_ADVANCE(yellow), DEPART(yellow-01@bay2), QUEUE_ADVANCE(green), DEPART(green-01@bay1), WIN [14 aliens boarded]
+Final status: WON
+
+## Level 29 "Laser Lane" (7x7, 4 bays, 10 ships)
+BFS shortest solution: yellow-01 -> pink-02 -> orange-02 -> green-01 -> pink-01 -> purple-01 -> cyan-01 -> yellow-02 -> orange-01 -> green-02 | matches expectedSolution: true
+Winning play paths: 16/2210 (0.7%)
+1. tap yellow-01: DISPATCH(yellow-01@bay1), DOCK(yellow-01@bay1), QUEUE_ADVANCE(yellow) [2 aliens boarded]
+2. tap pink-02: DISPATCH(pink-02@bay2), DOCK(pink-02@bay2), QUEUE_ADVANCE(pink) [3 aliens boarded]
+3. tap orange-02: DISPATCH(orange-02@bay3), DOCK(orange-02@bay3) [0 aliens boarded]
+4. tap green-01: DISPATCH(green-01@bay4), DOCK(green-01@bay4), QUEUE_ADVANCE(green), DEPART(pink-02@bay2) [5 aliens boarded]
+5. tap pink-01: DISPATCH(pink-01@bay2), DOCK(pink-01@bay2), QUEUE_ADVANCE(pink), QUEUE_ADVANCE(yellow), QUEUE_ADVANCE(green), DEPART(green-01@bay4), QUEUE_ADVANCE(yellow), DEPART(yellow-01@bay1), QUEUE_ADVANCE(orange), QUEUE_ADVANCE(pink) [13 aliens boarded]
+6. tap purple-01: DISPATCH(purple-01@bay1), DOCK(purple-01@bay1), QUEUE_ADVANCE(purple) [2 aliens boarded]
+7. tap cyan-01: DISPATCH(cyan-01@bay4), DOCK(cyan-01@bay4), QUEUE_ADVANCE(cyan), DEPART(cyan-01@bay4), QUEUE_ADVANCE(purple), DEPART(purple-01@bay1), QUEUE_ADVANCE(pink), DEPART(orange-02@bay3) [12 aliens boarded]
+8. tap yellow-02: DISPATCH(yellow-02@bay1), DOCK(yellow-02@bay1) [0 aliens boarded]
+9. tap orange-01: DISPATCH(orange-01@bay3), DOCK(orange-01@bay3), QUEUE_ADVANCE(orange), DEPART(orange-01@bay3), QUEUE_ADVANCE(yellow) [8 aliens boarded]
+10. tap green-02: DISPATCH(green-02@bay3), DOCK(green-02@bay3), QUEUE_ADVANCE(green), QUEUE_ADVANCE(yellow), DEPART(yellow-02@bay1), QUEUE_ADVANCE(green), DEPART(green-02@bay3), QUEUE_ADVANCE(pink), DEPART(pink-01@bay2), WIN [9 aliens boarded]
+Final status: WON
+
+## Level 30 "Grand Glitch Terminal" (7x7, 4 bays, 11 ships)
+BFS shortest solution: pink-02 -> cyan-02 -> cyan-01 -> blue-02 -> blue-01 -> green-01 -> purple-01 -> pink-01 -> orange-01 -> yellow-01 -> yellow-02 | matches expectedSolution: true
+Winning play paths: 8/3125 (0.3%)
+1. tap pink-02: DISPATCH(pink-02@bay1), DOCK(pink-02@bay1) [0 aliens boarded]
+2. tap cyan-02: DISPATCH(cyan-02@bay2), DOCK(cyan-02@bay2) [0 aliens boarded]
+3. tap cyan-01: DISPATCH(cyan-01@bay3), DOCK(cyan-01@bay3) [0 aliens boarded]
+4. tap blue-02: DISPATCH(blue-02@bay4), DOCK(blue-02@bay4), QUEUE_ADVANCE(blue), DEPART(blue-02@bay4), QUEUE_ADVANCE(pink), DEPART(pink-02@bay1), QUEUE_ADVANCE(cyan) [11 aliens boarded]
+5. tap blue-01: DISPATCH(blue-01@bay1), DOCK(blue-01@bay1) [0 aliens boarded]
+6. tap green-01: DISPATCH(green-01@bay4), DOCK(green-01@bay4), QUEUE_ADVANCE(green), DEPART(green-01@bay4), QUEUE_ADVANCE(blue) [12 aliens boarded]
+7. tap purple-01: DISPATCH(purple-01@bay4), DOCK(purple-01@bay4), QUEUE_ADVANCE(purple), DEPART(cyan-02@bay2), QUEUE_ADVANCE(cyan) [6 aliens boarded]
+8. tap pink-01: DISPATCH(pink-01@bay2), DOCK(pink-01@bay2), QUEUE_ADVANCE(pink), QUEUE_ADVANCE(blue), DEPART(blue-01@bay1) [4 aliens boarded]
+9. tap orange-01: DISPATCH(orange-01@bay1), DOCK(orange-01@bay1), QUEUE_ADVANCE(orange), QUEUE_ADVANCE(purple), DEPART(purple-01@bay4), QUEUE_ADVANCE(orange), DEPART(orange-01@bay1), QUEUE_ADVANCE(cyan) [7 aliens boarded]
+10. tap yellow-01: DISPATCH(yellow-01@bay1), DOCK(yellow-01@bay1), QUEUE_ADVANCE(yellow), QUEUE_ADVANCE(cyan), QUEUE_ADVANCE(yellow), DEPART(yellow-01@bay1), QUEUE_ADVANCE(cyan), DEPART(cyan-01@bay3), QUEUE_ADVANCE(pink), DEPART(pink-01@bay2) [14 aliens boarded]
+11. tap yellow-02: DISPATCH(yellow-02@bay1), DOCK(yellow-02@bay1), QUEUE_ADVANCE(yellow), DEPART(yellow-02@bay1), WIN [4 aliens boarded]
+Final status: WON

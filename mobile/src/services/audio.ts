@@ -14,6 +14,7 @@ import * as Haptics from "expo-haptics";
 import { useEffect } from "react";
 import { AppState, Platform } from "react-native";
 
+import type { MusicTrack } from "@/src/game/sectors";
 import type { GameEvent } from "@/src/game/types";
 import { getPrefs, usePrefs } from "@/src/services/prefs";
 
@@ -66,13 +67,33 @@ export function playSfx(name: Sfx, volume = 0.8) {
   }
 }
 
+const TRACKS: Record<MusicTrack, number> = {
+  default: require("../../assets/sounds/music.wav"),
+  lava: require("../../assets/sounds/music_lava.wav"),
+  ice: require("../../assets/sounds/music_ice.wav"),
+  neon: require("../../assets/sounds/music_neon.wav"),
+};
+const musicPlayers: Partial<Record<MusicTrack, AudioPlayer>> = {};
+let track: MusicTrack = "default";
+let wantActive = false;
+
+/** Switch the looping track (sector music). Old track pauses; session stays active (keepalive). */
+export function setMusicTrack(next: MusicTrack) {
+  if (next === track) return;
+  musicPlayers[track]?.pause();
+  track = next;
+  music = musicPlayers[track] ?? null;
+  syncMusic(wantActive);
+}
+
 export function syncMusic(active: boolean) {
+  wantActive = active;
   const want = active && getPrefs().music;
   try {
     if (want) {
       ensureMode();
       if (!music) {
-        music = createAudioPlayer(require("../../assets/sounds/music.wav"), PLAYER_OPTS);
+        music = musicPlayers[track] = createAudioPlayer(TRACKS[track], PLAYER_OPTS);
         music.loop = true;
         music.volume = 0.3;
       }
@@ -81,6 +102,10 @@ export function syncMusic(active: boolean) {
   } catch {
     // ignore
   }
+}
+
+export function currentTrack() {
+  return track;
 }
 
 export function musicStatus(): "playing" | "stopped" | "off" {

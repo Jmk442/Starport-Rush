@@ -101,9 +101,9 @@ const useStyles = makeStyles((c) => ({
   warnIcon: { marginBottom: 8 },
   title: { fontFamily: fonts.display, fontSize: 26, color: c.onSurface, textAlign: "center" },
   message: { fontFamily: fonts.text, fontSize: 14, color: c.onSurfaceSecondary, textAlign: "center", marginTop: 8, lineHeight: 20 },
-  actions: { alignSelf: "stretch", gap: 12, marginTop: 24 },
+  actions: { alignSelf: "stretch", gap: 10, marginTop: 20 },
   // secondary buttons keep 52pt height for thumbs
-  btn: { height: 52, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  btn: { height: 48, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   primary: { backgroundColor: c.brandPrimary },
   secondary: { backgroundColor: c.surfaceTertiary },
   pressed: { transform: [{ scale: 0.97 }], opacity: 0.9 },
