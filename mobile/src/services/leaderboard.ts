@@ -76,7 +76,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 /** Posts the local best if it hasn't been synced yet. Safe to call any time. */
-export async function syncDaily(date: string): Promise<"synced" | "nothing" | "offline"> {
+export async function syncDaily(date: string): Promise<"synced" | "nothing" | "offline" | "rejected"> {
   const best = await getLocalBest(date);
   if (!best || (await storage.getItem(k(date, "synced"), false))) return "nothing";
   const p = getPrefs();
@@ -96,11 +96,93 @@ export async function syncDaily(date: string): Promise<"synced" | "nothing" | "o
     });
     await storage.setItem(k(date, "synced"), true);
     return "synced";
-  } catch {
+  } catch (e) {
+    if (e instanceof Error && /^HTTP 4\d\d$/.test(e.message)) {
+      await storage.setItem(k(date, "synced"), true); // server rejected it for good (e.g. day over): stop retrying
+      return "rejected";
+    }
     return "offline";
   }
 }
 
 export function fetchLeaderboard(date: string) {
   return request<Leaderboard>(`/daily/${date}/leaderboard?limit=50&device_id=${encodeURIComponent(getPrefs().deviceId)}`);
+}
+
+// ---- Weekly Cup (sum of best daily scores, Mon-Sun UTC) ----
+export interface WeeklyEntry {
+  rank: number;
+  handle: string;
+  total: number;
+  days: number;
+  is_you: boolean;
+}
+export interface WeeklyBoard {
+  week_start: string;
+  week_end: string;
+  total_players: number;
+  entries: WeeklyEntry[];
+  you: WeeklyEntry | null;
+  last_week_top: WeeklyEntry[];
+}
+export function fetchWeekly(weekStart: string) {
+  return request<WeeklyBoard>(`/weekly/${weekStart}/leaderboard?limit=50&device_id=${encodeURIComponent(getPrefs().deviceId)}`);
+}
+
+// ---- Boss Rush (best combined time per device; local first, synced later) ----
+export interface RushResult {
+  ms: number;
+  undos: number;
+  splits: number[];
+}
+export interface RushEntry extends RushResult {
+  rank: number;
+  handle: string;
+  is_you: boolean;
+}
+export interface RushBoard {
+  total: number;
+  entries: RushEntry[];
+  you: RushEntry | null;
+}
+
+export async function getRushBest(): Promise<RushResult | null> {
+  const ms = await storage.getItem("sr_rush_ms", 0);
+  if (!ms) return null;
+  const splits = String((await storage.getItem("sr_rush_splits", "")) ?? "").split(",").map(Number);
+  return { ms, undos: (await storage.getItem("sr_rush_undos", 0)) ?? 0, splits };
+}
+
+/** Saves if faster than the local best; returns true for a new personal best. */
+export async function saveRushLocal(r: RushResult) {
+  const prev = await getRushBest();
+  if (prev && prev.ms <= r.ms) return false;
+  await Promise.all([
+    storage.setItem("sr_rush_ms", r.ms),
+    storage.setItem("sr_rush_undos", r.undos),
+    storage.setItem("sr_rush_splits", r.splits.join(",")),
+    storage.setItem("sr_rush_synced", false),
+  ]);
+  return true;
+}
+
+export async function syncRush(): Promise<"synced" | "nothing" | "offline" | "rejected"> {
+  const best = await getRushBest();
+  if (!best || (await storage.getItem("sr_rush_synced", false))) return "nothing";
+  const p = getPrefs();
+  try {
+    await request(`/bossrush/scores`, { method: "POST", body: JSON.stringify({ device_id: p.deviceId, handle: p.handle, ...best }) });
+    await storage.setItem("sr_rush_synced", true);
+    return "synced";
+  } catch (e) {
+    if (e instanceof Error && /^HTTP 4\d\d$/.test(e.message)) {
+      await storage.setItem("sr_rush_synced", true); // server rejected it for good: stop retrying
+      return "rejected";
+    }
+    return "offline";
+  }
+}
+
+export function fetchRushBoard() {
+  return request<RushBoard>(`/bossrush/leaderboard?limit=50&device_id=${encodeURIComponent(getPrefs().deviceId)}`);
 }

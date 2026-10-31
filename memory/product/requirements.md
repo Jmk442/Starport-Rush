@@ -62,3 +62,10 @@ Decisions: user chose both "Keep it offline: daily puzzle with a shareable score
 ## Round 5
 User's words: "Sector Bosses: Add a giant boss-ship puzzle at the end of each sector"
 (Context: sectors are Lava Moon 16-20, Ice Nebula 21-25, Neon Bazaar 26-30; boss levels are solver-proven winnable and fit each sector's theme.)
+
+## Round 6
+User's words:
+"Boss Rush: Add a mode that plays all three bosses back to back with one combined leaderboard time"
+"Weekly Cup: Add a weekly leaderboard that adds up each player's daily scores to bring people back"
+(Uses the same handle-only online leaderboard already approved for the Daily Challenge.)
+Round 6 decisions (user approved the builder's defaults): Boss Rush unlocks after beating all 3 bosses once; one clock from Engage on boss 1 to boss 3 cleared (intros/between screens don't count); each undo adds +5 s; Undo/Restart allowed inside the current boss with the clock running; quitting abandons the run; one all-time board of each player's best time, handle-only, offline-finished runs post later. Weekly Cup: Monday 00:00 to Sunday 23:59 UTC; score = sum of each player's best daily score per day (unplayed days 0); screen shows standings, days played, countdown, last week's top 3; reachable from the Daily screen and a home screen card.

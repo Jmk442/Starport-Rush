@@ -15,9 +15,10 @@ interface Props {
   accent: string;
   sectorName: string;
   onStart: () => void;
+  onQuit: () => void;
 }
 
-export function BossIntro({ level, accent, sectorName, onStart }: Props) {
+export function BossIntro({ level, accent, sectorName, onStart, onQuit }: Props) {
   const styles = useStyles();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -36,6 +37,9 @@ export function BossIntro({ level, accent, sectorName, onStart }: Props) {
   return (
     <Animated.View entering={FadeIn.duration(250)} exiting={FadeOut.duration(250)} style={styles.fill} testID="boss-intro">
       <View style={[styles.fill, styles.scrim]} />
+      <Pressable testID="boss-intro-quit-button" hitSlop={8} onPress={onQuit} style={[styles.quit, { top: insets.top + 64 }]}>
+        <Ionicons name="close" size={22} color={colors.onSurface} />
+      </Pressable>
       <View style={[styles.hazard, { top: insets.top + 24, backgroundColor: accent }]}>
         <Text style={styles.hazardText}>WARNING · WARNING · WARNING</Text>
       </View>
@@ -78,6 +82,7 @@ function Stat({ icon, label }: { icon: "people" | "grid" | "rocket"; label: stri
 const useStyles = makeStyles((c) => ({
   fill: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" },
   scrim: { backgroundColor: c.scrim },
+  quit: { position: "absolute", left: 16, width: 44, height: 44, borderRadius: radius.md, backgroundColor: c.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   hazard: { position: "absolute", left: 0, right: 0, height: 32, alignItems: "center", justifyContent: "center", transform: [{ rotate: "-3deg" }] },
   hazardText: { fontFamily: fonts.display, fontSize: 13, letterSpacing: 3, color: c.onBrandPrimary },
   card: { width: "88%", maxWidth: 380, backgroundColor: c.surfaceSecondary, borderRadius: radius.lg, borderWidth: 2, padding: 24, alignItems: "center" },

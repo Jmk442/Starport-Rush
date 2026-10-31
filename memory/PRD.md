@@ -51,6 +51,24 @@ Expo app requirement: /app/memory/product/requirements.md (+ full_spec.md). Prem
 - Jam fixes: taps after an already-decided jam no longer skip the animation (the jam used to pop up instantly). The result overlay is now derived from the settled board, so rejected taps can't hide it. Restart fully resets the daily. Bays show "Open" again after Restart (ghost-timer bug).
 - Tests: engine 112/112, daily/replay all pass (incl. false-jam + missing-jam regressions); testing agent iterations 6-8 passed.
 
+## Round 6 (2026-10)
+- Boss Rush (app/bossrush.tsx, src/game/bossRush.ts, RushClock):
+  - Unlocks after all 3 bosses are beaten once and plays bosses 120 → 125 → 130 back to back.
+  - One clock runs only from Engage until each boss is cleared; each undo adds +5 s; Undo/Restart keep it running.
+  - Leaving by any route (back button, intro quit, browser/Android back) abandons the run.
+  - Best time is saved locally first, then posted.
+  - API: POST /api/bossrush/scores (keeps the fastest per device); GET /api/bossrush/leaderboard.
+- Weekly Cup (app/weekly.tsx, src/game/weekly.ts):
+  - Runs Monday–Sunday UTC; score is the sum of each player's best daily score per day.
+  - Screen shows standings, days played, a countdown, last week's top 3 and a link to the daily.
+  - Opens from a home card and the Daily screen.
+  - API: GET /api/weekly/{monday}/leaderboard.
+- Server 4xx rejections of daily and rush scores stop retrying and show "saved on this phone".
+- Tests:
+  - Backend: 52 pass (tests/test_weekly_bossrush.py, test_bossrush_ranks.py).
+  - Node: engine 112; daily tests include the weekly and rush clock checks.
+  - Testing agent iterations 9–10 passed; the browser-back abandon fix was re-verified with a screenshot run.
+
 ## Backlog
 - P1: real-iPhone check of boss music/haptics and the jam overlay under device lag
 - P1: on-device check of haptics, pitch-rising audio and the image share card in Expo Go on iPhone; frame-rate profiling

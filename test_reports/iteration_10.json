@@ -1,0 +1,40 @@
+{
+  "summary": "Retested the 5 low-priority fixes from iteration 9, plus the backend tie-rank change and smoke flows. Backend: 52/52 pass (51 existing tests + 1 new tie-rank test). Mobile (390x844 web): 4 of the 5 fixes work. Fix #1 only partly works: the 'beforeRemove' listener never fires on web, so browser back and the new boss-intro quit button leave the screen but do NOT end the rush (going forward again brings back 'BOSS RUSH · 1/3' with the clock). The in-game back button still ends the run because it calls abandonRush() directly. A full 3-boss run works, and 'Next Boss (2/3)' / '(3/3)' keeps the run alive.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "game.tsx Boss Rush 'beforeRemove' listener", "issue": "The listener never fires on web, in any of these cases: (a) browser back (page.go_back) after Engage; (b) boss-intro-quit-button, which calls router.back(). A temporary console.log inside the listener never printed, although the listener was registered on the right stack (routes ['bossrush','game']). After leaving either way, going forward to /game?level=120&rush=1 rebuilt the screen with an active run: kicker 'BOSS RUSH · 1/3' and a rush-clock. Only game-home-button ends the run, because it calls abandonRush() directly. Native behaviour was not tested.", "testID": "boss-intro-quit-button", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "game (final rush boss)", "issues": ["After the last boss the top-bar rush-clock shows '--' behind the victory overlay, because abandonRush() runs before the overlay. Cosmetic only."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_weekly_bossrush.py", "/app/backend/tests/test_daily_leaderboard.py", "/app/backend/tests/test_bossrush_ranks.py", "/app/test_reports/pytest/pytest_results_iter10.xml"],
+  "action_items": [
+    "MEDIUM: Ending the rush on leave does not work on web. On web, expo-router handles browser back (and router.back()) with navigation.resetRoot(), which skips 'beforeRemove'. Fix suggestion: keep an 'advancingRef' that is set to true in the victory-rush-next onPress just before router.setParams. Then, in a GameBody unmount cleanup, call abandonRush() unless advancingRef.current is true. GameBody is keyed by level, so moving to the next boss unmounts the old body; the ref keeps the run alive in that case. Also call abandonRush() directly in BossIntro onQuit when inRush.",
+    "LOW (optional): syncDaily still treats a 4xx as 'offline' and retries forever. Only syncRush got the 'rejected' handling."
+  ],
+  "critical_code_review_comments": [
+    "game.tsx: the beforeRemove approach is not reliable on web (expo-router uses resetRoot on popstate). Use an unmount cleanup with an advancing flag instead.",
+    "leaderboard.ts syncDaily: the 4xx case is not handled the way syncRush now handles it."
+  ],
+  "verified_working": [
+    "Fix 2: when POST /api/bossrush/scores returns 422 (forced with page.route), the screen shows 'New personal best! Saved on this phone; the board couldn't accept this run.' and sr_rush_synced becomes true. Exactly 1 POST was made, with no retry after opening the hub.",
+    "Network abort: the screen shows 'Offline: saved, will post later.' and sr_rush_synced stays false. On opening the hub with the network back, the run posted and the hub shows #1 @TEST_t1 (you) 0:39.6.",
+    "Fix 3: when offline, the weekly header still shows 'WEEKLY CUP · 2026-10-26 → 2026-11-01', together with weekly-offline and the countdown.",
+    "Fix 4: weekly rows show '1/7 days played'.",
+    "Fix 5: going Weekly↔Daily 3 times in a row leaves only one weekly-screen in the DOM, and a single back press returns home.",
+    "Full 3-boss rush: kickers 'BOSS RUSH · 1/3' → 2/3 → 3/3, the intros say 'BOSS RUSH n/3', and buttons 'Next Boss (2/3)' and '(3/3)' keep the run going. An undo added +5s. Final screen: 'Total 0:47.1 · clock 0:42.1 + 1 undo ×5s.' and the hub's best time updates.",
+    "Backend: ties share a rank. Times 5001,5001,5002,5003×3,5004 gave ranks base,base,base+2,base+3×3,base+6. Each device's 'you' rank and the POST rank match its rank in the list.",
+    "Smoke: home weekly and boss rush cards, weekly screen, boss rush hub, normal boss 120 from the home tile (no clock, moves shown, victory badge), the boss-intro quit button on a normal boss (goes home, and deep link replaces to /), and a level 1 win."
+  ],
+  "updated_files": ["/app/backend/tests/test_bossrush_ranks.py (new)"],
+  "success_rate": {"backend": "100% (52/52)", "frontend": "~90% (fix #1 only partly works: browser back and the intro quit do not end the run on web)"},
+  "seed_data_creation": "None kept. Test bossrush/daily records with 'test-' device ids were deleted. The 6 real daily scores for 2026-10-31 are untouched; bossrush_scores now has 0 documents.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Boss tiles need sr_stars_1..20 = 3 (level 20 too, not just 1-19). The rush lives in memory, so test 'leave ends run' with an in-app leave followed by page.go_forward(). That rebuilds the game screen without a reload; then check rush-clock / kicker. The undo button testID is control-undo-button. Tapping a ship that already launched fails with 'outside viewport'. Tap ships about 950ms apart. A full rush run takes about 45s.",
+  "rca_of_issue": "Reproduction: open /bossrush → Start → Engage → browser back (or tap boss-intro-quit-button on the intro) → page.go_forward(). The game screen comes back with 'BOSS RUSH · 1/3' and rush-clock. Cause: the beforeRemove callback never fires on web (checked with a temporary log). Expo-router's web linking calls navigation.resetRoot() on popstate, and resetRoot skips beforeRemove (react-navigation issue #9031). Fix: end the rush in a GameBody unmount cleanup, skipped when an advancing ref is set by the Next Boss button; also call abandonRush() in onQuit."
+}

@@ -70,6 +70,11 @@ export default function DailyScreen() {
           <Ionicons name="rocket" size={20} color={colors.onBrandPrimary} />
           <Text style={styles.ctaText}>{best ? "Play again for a better score" : "Play today's puzzle"}</Text>
         </Pressable>
+        <Pressable testID="daily-weekly-button" onPress={() => router.dismissTo("/weekly")} style={({ pressed }) => [styles.weekly, pressed && styles.pressed]}>
+          <Ionicons name="trophy" size={18} color={colors.yellow} />
+          <Text style={styles.weeklyText}>Weekly Cup standings</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.onSurface} />
+        </Pressable>
       </View>
       <View style={styles.boardHead}>
         <Text style={styles.section}>Leaderboard</Text>
@@ -146,6 +151,8 @@ const useStyles = makeStyles((c) => ({
   cta: { height: 52, borderRadius: radius.pill, backgroundColor: c.brandPrimary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 16 },
   ctaText: { fontFamily: fonts.display, fontSize: 16, color: c.onBrandPrimary },
   pressed: { transform: [{ scale: 0.97 }] },
+  weekly: { height: 48, borderRadius: radius.pill, borderWidth: 1, borderColor: c.yellow, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10 },
+  weeklyText: { fontFamily: fonts.display, fontSize: 15, color: c.onSurface },
   boardHead: { flexDirection: "row", alignItems: "baseline", marginTop: 24, marginBottom: 8 },
   section: { flex: 1, fontFamily: fonts.display, fontSize: 18, color: c.onSurface },
   count: { fontFamily: fonts.text, fontSize: 12, color: c.muted },

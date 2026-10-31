@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AlienFace } from "@/src/components/game/AlienFace";
 import { SettingsSheet } from "@/src/components/SettingsSheet";
+import { isRushUnlocked } from "@/src/game/bossRush";
 import { totalStars } from "@/src/game/cosmetics";
 import { getLevel, LEVELS } from "@/src/game/levels";
 import { decodeReplay, findReplayCode } from "@/src/game/replay";
@@ -34,6 +35,7 @@ export default function Home() {
 
   const unlocked = (id: number) => LEVELS.some((l) => l.levelId === id) && (id === 1 || (prefs.stars[id - 1] ?? 0) > 0);
   const latest = Math.max(...LEVELS.map((l) => l.levelId).filter(unlocked));
+  const rushOpen = isRushUnlocked(prefs.stars);
   const play = (id: number) => router.push({ pathname: "/game", params: { level: String(id) } });
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState(false);
@@ -92,6 +94,23 @@ export default function Home() {
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.onSurface} />
         </Pressable>
+
+        <View style={styles.modeRow}>
+          <Pressable testID="home-weekly-card" onPress={() => router.push("/weekly")} style={({ pressed }) => [styles.mode, { borderColor: colors.yellow }, pressed && styles.pressed]}>
+            <Ionicons name="trophy" size={20} color={colors.yellow} />
+            <Text style={[styles.modeKicker, { color: colors.yellow }]}>WEEKLY CUP</Text>
+            <Text style={styles.modeTitle} numberOfLines={2}>
+              Dailies add up all week
+            </Text>
+          </Pressable>
+          <Pressable testID="home-bossrush-card" onPress={() => router.push("/bossrush")} style={({ pressed }) => [styles.mode, { borderColor: rushOpen ? colors.lavaAccent : colors.border }, pressed && styles.pressed]}>
+            <Ionicons name={rushOpen ? "skull" : "lock-closed"} size={20} color={rushOpen ? colors.lavaAccent : colors.muted} />
+            <Text style={[styles.modeKicker, { color: rushOpen ? colors.lavaAccent : colors.muted }]}>BOSS RUSH</Text>
+            <Text style={styles.modeTitle} numberOfLines={2}>
+              {rushOpen ? "3 bosses, one clock" : "Beat all 3 bosses to unlock"}
+            </Text>
+          </Pressable>
+        </View>
 
         {SECTORS.map((sec, si) => (
           <View key={sec.key} testID={`sector-${sec.key}`}>
@@ -219,7 +238,11 @@ const useStyles = makeStyles((c) => ({
   bg: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
   content: { flexGrow: 1, paddingHorizontal: 24 },
   topRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  daily: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: c.neonCell, borderRadius: radius.lg, borderWidth: 1.5, borderColor: c.neonAccent, padding: 12, marginBottom: 16, minHeight: 64 },
+  daily: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: c.neonCell, borderRadius: radius.lg, borderWidth: 1.5, borderColor: c.neonAccent, padding: 12, marginBottom: 12, minHeight: 64 },
+  modeRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
+  mode: { flex: 1, backgroundColor: c.surfaceSecondary, borderRadius: radius.lg, borderWidth: 1.5, padding: 12, gap: 4, minHeight: 96 },
+  modeKicker: { fontFamily: fonts.display, fontSize: 11, letterSpacing: 2 },
+  modeTitle: { fontFamily: fonts.display, fontSize: 14, color: c.onSurface },
   dailyIcon: { width: 40, height: 40, borderRadius: radius.md, backgroundColor: c.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   dailyKicker: { fontFamily: fonts.display, fontSize: 11, letterSpacing: 2, color: c.neonAccent },
   dailyTitle: { fontFamily: fonts.display, fontSize: 16, color: c.onSurface },

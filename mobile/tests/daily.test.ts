@@ -5,10 +5,12 @@ import { BOSS_LEVELS, LEVELS } from "../src/game/levels";
 import { decodeReplay, encodeReplay, findReplayCode } from "../src/game/replay";
 import { canonicalKey, countPaths, solve } from "../src/game/solver";
 import { busyActionPolicy, resetsResult } from "../src/game/timing";
+import { abandonRush, addRushUndo, advanceRush, clockMs, formatMs, getRush, isRushUnlocked, resumeClock, startRush, stopClock, totalMs, UNDO_PENALTY_MS } from "../src/game/bossRush";
+import { daysElapsed, formatCountdown, msUntilWeekEnd, shiftWeek, weekEndKey, weekStartKey } from "../src/game/weekly";
 
 declare const console: { log: (...a: unknown[]) => void };
 declare const process: { exitCode: number };
-declare const Date: { now(): number; new (s?: string | number): { toISOString(): string; getUTCDay(): number } };
+declare const Date: { now(): number; parse(s: string): number; new (s?: string | number): { toISOString(): string; getUTCDay(): number } };
 
 let failed = 0;
 function test(name: string, fn: () => void) {
@@ -159,6 +161,38 @@ test("missing-jam regression (Round 5, Level 3): full bays that can't board are 
       if (x.status === "PLAYING") for (const id of legalMoves(x)) stack.push(applyTap(x, id).state);
     }
   }
+});
+
+test("weekly cup: UTC Monday weeks, countdown and days elapsed", () => {
+  ok(weekStartKey("2026-10-31") === "2026-10-26", "Sat -> Mon");
+  ok(weekStartKey("2026-10-26") === "2026-10-26" && weekStartKey("2026-11-01") === "2026-10-26", "Mon/Sun same week");
+  ok(weekStartKey("2026-11-02") === "2026-11-02", "next Monday");
+  ok(shiftWeek("2026-10-26", -1) === "2026-10-19" && weekEndKey("2026-10-26") === "2026-11-01", "shift/end");
+  const sunLate = Date.parse("2026-11-01T23:00:00Z");
+  ok(msUntilWeekEnd("2026-10-26", sunLate) === 3600000 && daysElapsed("2026-10-26", sunLate) === 7, "countdown/days");
+  ok(formatCountdown(3600000) === "1h 0m" && formatCountdown(2 * 86400000 + 5 * 3600000) === "2d 5h", "format");
+});
+
+test("boss rush: clock only while playing, undo penalty, splits, unlock", () => {
+  const r = startRush();
+  ok(clockMs(r, 0) === 0, "clock idle during intro");
+  resumeClock(1000);
+  addRushUndo();
+  stopClock(31000); // boss 1: 30s
+  ok(advanceRush() === 125, "next boss 125");
+  ok(clockMs(r, 99999) === 30000, "paused between bosses");
+  resumeClock(100000);
+  stopClock(140000); // boss 2: 40s
+  ok(advanceRush() === 130, "next boss 130");
+  resumeClock(200000);
+  stopClock(250000); // boss 3: 50s
+  ok(JSON.stringify(r.splits) === "[30000,40000,50000]", `splits ${r.splits}`);
+  ok(totalMs(r) === 120000 + UNDO_PENALTY_MS, "total = splits + 5s per undo");
+  ok(advanceRush() === null, "rush done after 3 bosses");
+  ok(formatMs(83456) === "1:23.4", "format");
+  ok(!isRushUnlocked({ 120: 3, 125: 1 }) && isRushUnlocked({ 120: 3, 125: 1, 130: 2 }), "unlock after all 3");
+  abandonRush();
+  ok(getRush() === null, "abandon");
 });
 
 console.log(failed ? `\n${failed} failed` : "\nall daily/replay tests passed");

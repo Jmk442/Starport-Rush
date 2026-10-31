@@ -3,7 +3,7 @@ import * as Clipboard from "expo-clipboard";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Linking from "expo-linking";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Share, Text, useWindowDimensions, View } from "react-native";
 import Animated, { ZoomIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,8 +18,10 @@ import { ShareCardModal, type ShareData } from "@/src/components/game/ShareCard"
 import { DockBays } from "@/src/components/game/DockBays";
 import { LaunchYard } from "@/src/components/game/LaunchYard";
 import { ResultOverlay } from "@/src/components/game/ResultOverlay";
+import { RushClock } from "@/src/components/game/RushClock";
 import { SettingsSheet } from "@/src/components/SettingsSheet";
 import { Starfield } from "@/src/components/Starfield";
+import { abandonRush, addRushUndo, advanceRush, clockMs, formatMs, getRush, resumeClock, RUSH_BOSSES, stopClock, totalMs, UNDO_PENALTY_MS } from "@/src/game/bossRush";
 import { newlyUnlocked, totalStars } from "@/src/game/cosmetics";
 import { dailyLevel, dailyScore } from "@/src/game/daily";
 import { getLevel, LEVEL_1, nextLevelId } from "@/src/game/levels";
@@ -29,23 +31,23 @@ import type { LevelDef } from "@/src/game/types";
 import { starsFor, useGameSession } from "@/src/game/useGameSession";
 import { COLOR_LABEL } from "@/src/game/visuals";
 import { setMusicTrack } from "@/src/services/audio";
-import { saveLocal, syncDaily } from "@/src/services/leaderboard";
+import { saveLocal, saveRushLocal, syncDaily, syncRush } from "@/src/services/leaderboard";
 import { getPrefs, recordStars, usePrefs } from "@/src/services/prefs";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
 
 export default function GameScreen() {
-  const params = useLocalSearchParams<{ level?: string; daily?: string }>();
+  const params = useLocalSearchParams<{ level?: string; daily?: string; rush?: string }>();
   const level = useMemo(
     () => (params.daily ? dailyLevel(params.daily) : (getLevel(Number(params.level ?? 1)) ?? LEVEL_1)),
     [params.level, params.daily],
   );
   // keyed so switching level resets the whole session
-  return <GameBody key={params.daily ?? level.levelId} level={level} daily={params.daily} />;
+  return <GameBody key={params.daily ?? level.levelId} level={level} daily={params.daily} rush={params.rush === "1"} />;
 }
 
 const PARTY: ("cyan" | "pink" | "yellow" | "green")[] = ["cyan", "pink", "yellow", "green"];
 
-function GameBody({ level, daily }: { level: LevelDef; daily?: string }) {
+function GameBody({ level, daily, rush }: { level: LevelDef; daily?: string; rush?: boolean }) {
   const styles = useStyles();
   const { colors } = useTheme();
   const router = useRouter();
@@ -66,6 +68,26 @@ function GameBody({ level, daily }: { level: LevelDef; daily?: string }) {
   const isLast = !daily && nextId === null;
   const nextBoss = nextId !== null && nextId >= 100;
   const [intro, setIntro] = useState(!!boss);
+  // Boss Rush: active run whose current boss is this level (stable for this screen)
+  const [rushIndex] = useState(() => {
+    const r = rush && !daily ? getRush() : null;
+    return r && RUSH_BOSSES[r.index] === level.levelId ? r.index : -1;
+  });
+  const inRush = rushIndex >= 0;
+  // Any way of leaving the screen (in-game back, Android back, iOS swipe, browser back) ends
+  // the run, except moving on to the next boss (which remounts this body via the level key).
+  const advancing = useRef(false);
+  useEffect(
+    () => () => {
+      if (inRush && !advancing.current) abandonRush();
+    },
+    [inRush],
+  );
+  const [rushInfo, setRushInfo] = useState<{ split: number; clock: number; total: number; undos: number; final: boolean; best?: boolean; sync?: string } | null>(null);
+  const undo = () => {
+    if (inRush && session.canUndo) addRushUndo(); // clock keeps running; +5s per undo
+    session.dispatch({ type: "UNDO" });
+  };
   const goNext = () => {
     if (daily) router.dismissTo("/daily");
     else if (isLast) router.dismissTo({ pathname: "/", params: { stage: "complete" } });
@@ -104,7 +126,7 @@ function GameBody({ level, daily }: { level: LevelDef; daily?: string }) {
       saveLocal(daily, result).then(async (best) => {
         setDailyInfo({ score, best, sync: "posting" });
         const s = await syncDaily(daily);
-        setDailyInfo({ score, best, sync: s === "offline" ? "offline" : best ? "posted" : "kept" });
+        setDailyInfo({ score, best, sync: s === "offline" ? "offline" : s === "rejected" ? "rejected" : best ? "posted" : "kept" });
       });
       return;
     }
@@ -114,6 +136,23 @@ function GameBody({ level, daily }: { level: LevelDef; daily?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [display.status, stars, level.levelId, daily]);
   const won = display.status === "WON";
+  useEffect(() => {
+    if (!inRush || !won || rushInfo) return;
+    stopClock();
+    const r = getRush();
+    if (!r) return;
+    const info = { split: r.splits[r.index], clock: clockMs(r), total: totalMs(r), undos: r.undos, final: r.index === RUSH_BOSSES.length - 1 };
+    setRushInfo(info);
+    if (!info.final) return;
+    const result = { ms: Math.round(info.total), undos: r.undos, splits: r.splits.map(Math.round) };
+    abandonRush();
+    saveRushLocal(result).then(async (best) => {
+      setRushInfo({ ...info, best, sync: "posting" });
+      const st = await syncRush();
+      setRushInfo({ ...info, best, sync: st === "offline" ? "offline" : st === "rejected" ? "rejected" : best ? "posted" : "kept" });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inRush, won]);
   // Boss stages hold the board a little longer for the big victory moment.
   const [bossHoldDone, setBossHoldDone] = useState(false);
   useEffect(() => {
@@ -140,23 +179,33 @@ function GameBody({ level, daily }: { level: LevelDef; daily?: string }) {
       <View style={{ paddingTop: insets.top, paddingBottom: insets.bottom, flex: 1 }}>
         <View style={{ height: queueH }}>
           <View style={styles.topBar}>
-            <Pressable testID="game-home-button" hitSlop={8} onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} style={styles.iconBtn}>
+            <Pressable testID="game-home-button" hitSlop={8} onPress={() => {
+                if (inRush) abandonRush(); // quitting ends the run
+                if (router.canGoBack()) router.back();
+                else router.replace("/");
+              }}
+              style={styles.iconBtn}
+            >
               <Ionicons name="chevron-back" size={22} color={colors.onSurface} />
             </Pressable>
             <View style={styles.titleWrap}>
               <Text style={[styles.levelNum, { color: colors[sector.accent] }]} numberOfLines={1} testID="game-sector-name">
-                {daily ? `DAILY · ${daily}` : `${sector.name.toUpperCase()} · ${boss ? "SECTOR BOSS" : `LEVEL ${level.levelId}`}`}
+                {daily ? `DAILY · ${daily}` : inRush ? `BOSS RUSH · ${rushIndex + 1}/${RUSH_BOSSES.length}` : `${sector.name.toUpperCase()} · ${boss ? "SECTOR BOSS" : `LEVEL ${level.levelId}`}`}
               </Text>
               <Text style={styles.levelName} testID="game-level-name" numberOfLines={1}>
                 {level.name}
               </Text>
             </View>
-            <View style={styles.moves}>
-              <Text style={styles.movesNum} testID="game-moves">
-                {display.moves}
-              </Text>
-              <Text style={styles.movesLabel}>moves</Text>
-            </View>
+            {inRush ? (
+              <RushClock finalMs={rushInfo?.final ? rushInfo.total : undefined} />
+            ) : (
+              <View style={styles.moves}>
+                <Text style={styles.movesNum} testID="game-moves">
+                  {display.moves}
+                </Text>
+                <Text style={styles.movesLabel}>moves</Text>
+              </View>
+            )}
           </View>
           <AlienQueue queue={display.queue} width={width} height={queueH - 52} mood={session.mood} hat={prefs.hat} />
         </View>
@@ -182,7 +231,7 @@ function GameBody({ level, daily }: { level: LevelDef; daily?: string }) {
         <ControlBar
           height={ctrlH}
           buttons={[
-            { id: "undo", icon: "arrow-undo", label: "Undo", onPress: () => session.dispatch({ type: "UNDO" }), disabled: !session.canUndo },
+            { id: "undo", icon: "arrow-undo", label: "Undo", onPress: undo, disabled: !session.canUndo },
             { id: "restart", icon: "refresh", label: "Restart", onPress: () => session.dispatch({ type: "RESTART" }) },
             { id: "hint", icon: "bulb", label: "Hint", onPress: session.requestHint, disabled: !playing || session.busy },
             { id: "settings", icon: "settings-sharp", label: "Settings", onPress: () => setSettingsOpen(true) },
@@ -191,7 +240,42 @@ function GameBody({ level, daily }: { level: LevelDef; daily?: string }) {
       </View>
 
       {won && boss && !showVictory && <BossBurst accent={colors[sector.accent]} />}
-      {showVictory && (
+      {showVictory && inRush && rushInfo && (
+        <ResultOverlay
+          kind="victory"
+          title={rushInfo.final ? "Boss Rush Complete!" : `${boss?.title} Defeated!`}
+          message={
+            rushInfo.final
+              ? `Total ${formatMs(rushInfo.total)} · clock ${formatMs(rushInfo.clock)}${rushInfo.undos ? ` + ${rushInfo.undos} undo${rushInfo.undos > 1 ? "s" : ""} ×${UNDO_PENALTY_MS / 1000}s` : ""}.`
+              : `Boss ${rushIndex + 1}/${RUSH_BOSSES.length} down in ${formatMs(rushInfo.split)}. Rush time so far ${formatMs(rushInfo.total)}. The clock waits until you Engage the next boss.`
+          }
+          stars={stars}
+          actions={[
+            rushInfo.final
+              ? { id: "rush-board", label: "View Boss Rush Board", primary: true, onPress: () => router.dismissTo("/bossrush") }
+              : {
+                  id: "rush-next",
+                  label: `Next Boss (${rushIndex + 2}/${RUSH_BOSSES.length})`,
+                  primary: true,
+                  onPress: () => {
+                    advancing.current = true;
+                    router.setParams({ level: String(advanceRush()), rush: "1" });
+                  },
+                },
+          ]}
+        >
+          {rushInfo.final && (
+            <View style={styles.dailyBox} testID="victory-rush-total">
+              <Text style={styles.dailyScore}>{formatMs(rushInfo.total)}</Text>
+              <Text style={styles.dailySync} testID="victory-rush-sync">
+                {rushInfo.best ? "New personal best! " : rushInfo.sync ? "Your best run is kept. " : ""}
+                {rushInfo.sync === "offline" ? "Offline: saved, will post later." : rushInfo.sync === "rejected" ? "Saved on this phone; the board couldn't accept this run." : rushInfo.sync === "posted" ? "Posted to the Boss Rush board." : rushInfo.sync === "kept" ? "" : "Saving…"}
+              </Text>
+            </View>
+          )}
+        </ResultOverlay>
+      )}
+      {showVictory && !inRush && (
         <ResultOverlay
           kind="victory"
           title={daily ? "Daily Cleared!" : boss ? `${boss.title} Defeated!` : isLast ? "Starport Legend!" : "Launch Complete!"}
@@ -236,11 +320,13 @@ function GameBody({ level, daily }: { level: LevelDef; daily?: string }) {
                 {dailyInfo.best ? "New personal best! " : "Your best today is kept. "}
                 {dailyInfo.sync === "offline"
                   ? "Offline: saved, will post to the leaderboard later."
-                  : dailyInfo.sync === "posted"
-                    ? "Posted to the leaderboard."
-                    : dailyInfo.sync === "kept"
-                      ? ""
-                      : "Saving…"}
+                  : dailyInfo.sync === "rejected"
+                    ? "Saved on this phone; the leaderboard couldn't accept it."
+                    : dailyInfo.sync === "posted"
+                      ? "Posted to the leaderboard."
+                      : dailyInfo.sync === "kept"
+                        ? ""
+                        : "Saving…"}
               </Text>
             </View>
           )}
@@ -272,12 +358,27 @@ function GameBody({ level, daily }: { level: LevelDef; daily?: string }) {
               : "Every remaining ship is boxed in. Undo your last launch or restart."
           }
           actions={[
-            { id: "undo", label: "Undo", primary: true, onPress: () => session.dispatch({ type: "UNDO" }) },
+            { id: "undo", label: inRush ? `Undo (+${UNDO_PENALTY_MS / 1000}s)` : "Undo", primary: true, onPress: undo },
             { id: "restart", label: "Restart", onPress: () => session.dispatch({ type: "RESTART" }) },
           ]}
         />
       )}
-      {intro && boss && <BossIntro level={level} accent={colors[sector.accent]} sectorName={sector.name} onStart={() => setIntro(false)} />}
+      {intro && boss && (
+        <BossIntro
+          level={level}
+          accent={colors[sector.accent]}
+          sectorName={inRush ? `Boss Rush ${rushIndex + 1}/${RUSH_BOSSES.length} · ${sector.name}` : sector.name}
+          onQuit={() => {
+            if (inRush) abandonRush();
+            if (router.canGoBack()) router.back();
+            else router.replace("/");
+          }}
+          onStart={() => {
+            setIntro(false);
+            if (inRush) resumeClock(); // rush clock only runs while a boss is being played
+          }}
+        />
+      )}
       <SettingsSheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
       {toast && (
         <Pressable testID="game-toast" onPress={() => setToast(null)} style={[styles.toast, { bottom: insets.bottom + 24 }]}>

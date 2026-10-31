@@ -1,0 +1,40 @@
+{
+  "summary": "Round 6 (Boss Rush + Weekly Cup), backend and mobile web at 375x667. BACKEND: new pytest file test_weekly_bossrush.py has 29 tests and all pass. Together with the daily regression suite, 51 of 51 pass; one concurrency test hit a network ConnectTimeout once and passed on rerun. Weekly checks: response shape; week_end is Monday+6; non-Monday and bad dates return 400; totals equal the sum across the week; the previous Sunday is excluded; days are counted; ties share a rank; is_you and you are correct; last_week_top is correct; an unknown device gets you=null. Boss Rush checks: keeps the best ms; a slower post keeps the best time but refreshes the handle; ms < sum(splits) returns 400; all validation bounds hold, and the 5000/1000 boundaries are accepted; 8 concurrent posts create 1 doc with the min ms; ties share a rank; no _id leaks. FRONTEND: Home weekly card goes to /weekly. The Boss Rush card is locked ('Beat all 3 bosses to unlock') and shows '3 bosses, one clock' once sr_stars_120/125/130 are set. The Boss Rush hub shows rush-locked, then rush-start-button. A full 3-boss run passes. The URL is /game?level=120&rush=1, the kicker reads 'BOSS RUSH · 1/3', and the rush clock replaces the moves box. The clock stays at 0:00.0 during the intro and ticks after Engage. Undo shows '+5s undo'. After each of the first two bosses, the clock is frozen on the victory overlay and during the next intro. Victory messages show the split and the rush time. 'Next Boss (2/3)' and 'Next Boss (3/3)' work. Restart keeps the clock running and keeps the penalty. Final screen: 'Boss Rush Complete!', total 1:12.0 = clock 1:07.0 + 1 undo × 5s, sync text 'New personal best! Posted to the Boss Rush board.' The board button goes to /bossrush with 'Your best: 1:12.0 (1 undo)' and rush-row-1 '(you)'. The jam overlay shows 'Undo (+5s)'; the clock keeps ticking during the jam, and the undo adds a penalty. Double-tapping Next does not skip a boss. game-home-button after Engage goes to /bossrush. Opening /game?level=125&rush=1 directly gives a normal boss: 'ICE NEBULA · SECTOR BOSS', a moves box and no clock. Weekly screen: countdown 'Ends in 1d 1h', 'You: X/6 days', your total, play-daily goes to /daily, daily-weekly-button goes to /weekly, rows render. With seeded data, the podium and '(you)' row are highlighted. The offline banner appears when the API is blocked. Regressions pass: boss 120 from its home tile, Level 1 win, daily game opens. No page errors. All test data is cleaned up; the 6 real 2026-10-31 daily entries are preserved.",
+  "backend_issues": {"critical": [], "minor": [
+    {"endpoint": "GET /api/bossrush/leaderboard", "issue": "N+1 queries: _rush_rank runs one count_documents per entry (up to 101 queries per request). Rank could be computed in-loop from the sorted list (ties: same ms keeps the previous rank). Perf only."}
+  ]},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "weekly.tsx row meta", "issue": "Grammar: '1/7 day played' should read '1/7 days played'. The pluralisation uses days===1, but the phrase is 'N/7 days'.", "testID": "weekly-row-<rank>", "priority": "LOW"},
+      {"component": "weekly.tsx hero kicker", "issue": "When offline or before load, the kicker shows 'WEEKLY CUP · 2026-10-26 → ' with an empty end date. Use weekEndKey(week) locally instead of board?.week_end.", "testID": "weekly-hero", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Boss Rush quit via system back", "issue": "abandonRush() is only called from game-home-button. Browser back, Android hardware back and iOS swipe-back leave the in-memory run alive, with segStart still running. Impact is low because startRush() resets it, but the requirement says quitting abandons. Suggest abandoning in a GameBody unmount cleanup unless advancing to the next boss. Note: the BossIntro overlay covers game-home-button, so the run cannot be quit from the intro via the UI (same as before for normal bosses).", "affected_testIDs": ["game-home-button"]},
+      {"flow": "Offline sync of rush/daily", "issue": "request() throws on any non-2xx, and syncRush/syncDaily map that to 'offline'. A 400/422 rejection then shows 'Offline: saved, will post later' and retries forever. Distinguish 4xx from network errors.", "affected_testIDs": ["victory-rush-sync"]}
+    ],
+    "design_issues": [
+      {"screen": "Weekly <-> Daily", "issues": ["LOW: weekly-play-daily-button and daily-weekly-button both router.push, so switching back and forth grows the stack (2 weekly-screen instances were seen in the DOM). Consider dismissTo/back when the target is already in the stack."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_weekly_bossrush.py", "/app/backend/tests/test_daily_leaderboard.py", "/app/test_reports/pytest/pytest_round6.xml"],
+  "action_items": [
+    "LOW: abandon the rush on GameBody unmount (system back/gesture), not only on game-home-button.",
+    "LOW: weekly kicker should use weekEndKey(week) so the end date shows when offline.",
+    "LOW: fix the '1/7 day played' grammar to 'days played'.",
+    "LOW: in syncRush/syncDaily, treat a 4xx response as 'rejected', not 'offline'.",
+    "LOW/perf: compute boss rush ranks without per-entry count queries."
+  ],
+  "critical_code_review_comments": [
+    "Rush clock logic is sound. stopClock runs on WON status (not after animations), resumeClock runs only on Engage, and splits/totals add up exactly (20.1+26.9+19.9+5 = 72.0).",
+    "Weekly aggregation sorts by updated_at desc so $first gives the latest handle. Tie-break sort is days asc (fewer days ranks above at equal total); ranks are shared anyway.",
+    "BossRushIn reuses validators via __func__. Verified working (bad handle/device give 422)."
+  ],
+  "updated_files": ["/app/backend/tests/test_weekly_bossrush.py (new)"],
+  "success_rate": {"backend": "100% (51/51; 1 network flake on rerun)", "frontend": "100% of requested flows; 5 LOW issues"},
+  "seed_data_creation": "Temporary: test-* daily_scores (this week and last week) and bossrush_scores from pytest and the browser run (device d-mvwzciue..., handle BouncyGloop76). All deleted. bossrush_scores is now empty, and the 6 real 2026-10-31 daily entries remain.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Boss tiles on home need levels 1-19 starred (sr_stars_N) to be playable. The Boss Rush unlock only needs sr_stars_120/125/130. Rush state is in memory, so do the whole run in a single Playwright script. Boss 120 jam path: red-01, pink-01, green-01, orange-01. sr_device is stored JSON-encoded (JSON.stringify). Server date is 2026-10-31 (a Saturday); the week starts 2026-10-26.",
+  "rca_of_issue": ""
+}
