@@ -28,6 +28,14 @@ Expo app requirement: /app/memory/product/requirements.md (+ full_spec.md). Prem
 - Progressive level unlocking; Next Level goes straight to the next level
 - Engine tests 26/26; testing agent iteration_2 passed every flow. Its 3 minor issues (combos lost on fast taps, desktop share fallback, share backdrop and queue padding) are fixed
 
+## Round 3 (2026-09)
+- Music-stop bug (iPhone, level 3): root cause found in expo-audio's iOS source. A finished sound effect, or a JS pause(), deactivates the audio session 100 ms later unless the player has keepAudioSessionActive, and only counts players reporting .playing. The game screen paused and replayed music on every level change. Fix: keepAudioSessionActive on all players, music owned by a root-level controller (never paused on level change; pauses only in background), and a 1.5s watchdog. Reproduced with tests/audio_session_model.ts (old build: 1317/2000 simulated L1→L3 runs went silent; fix: 0). Not verified on a real iPhone.
+- Levels 6-15 (generator variants included); the win-path ratio falls strictly from L2 to L15 (0.281 → 0.002). Engine tests 56/56. Traces: memory/product/solution_traces.md
+- Player handle: funny auto-generated default (e.g. SneakyGlorp42), editable or re-rollable in Settings, shown on the share card
+- Hangar: 10 hats + 8 trails unlocked by total stars (max 45). Hats show on queue, victory and share-card aliens; trails show on yard and bay launches. The victory screen shows new unlocks
+- Feel: departures 600 ms, "SECTOR CLEAR!" hold 1.1 s before victory, jam hold 0.6 s
+- Testing agent iteration_3: all flows passed. Fixed afterwards: settings sheet scrollable on SE, +N badge given its own slot, hangar names wrap, unlock message grammar
+
 ## Backlog
 - P1: on-device check of haptics, pitch-rising audio and the image share card in Expo Go on iPhone; frame-rate profiling
 - P1: Levels 6+ (generator in tests/generate_levels.ts already supports specs)

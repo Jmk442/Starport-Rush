@@ -10,8 +10,10 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { ShipBody } from "@/src/components/game/ShipBody";
+import { Trail } from "@/src/components/game/Trail";
 import type { Ship } from "@/src/game/types";
 import { DIR_VEC } from "@/src/game/visuals";
+import { usePrefs } from "@/src/services/prefs";
 import { makeStyles } from "@/src/theme";
 
 interface Props {
@@ -27,6 +29,7 @@ const PAD = 4;
 
 function YardShipImpl({ ship, cell, hinted, bumpKey, flashKey, onPress }: Props) {
   const styles = useStyles();
+  const { trail } = usePrefs();
   const parked = ship.status === "PARKED";
   const [vx, vy] = DIR_VEC[ship.exitDirection];
   const travel = useSharedValue(parked ? 0 : 1);
@@ -53,7 +56,7 @@ function YardShipImpl({ ship, cell, hinted, bumpKey, flashKey, onPress }: Props)
 
   const dist = cell * 7;
   const anim = useAnimatedStyle(() => ({
-    opacity: 1 - travel.value,
+    opacity: 1 - travel.value * travel.value,
     transform: [
       { translateX: vx * (travel.value * dist + bump.value * 6) },
       { translateY: vy * (travel.value * dist + bump.value * 6) },
@@ -69,6 +72,7 @@ function YardShipImpl({ ship, cell, hinted, bumpKey, flashKey, onPress }: Props)
       pointerEvents={parked ? "auto" : "none"}
       style={[styles.wrap, { left: ship.x * cell + PAD, top: ship.y * cell + PAD, width: w, height: h }, anim]}
     >
+      <Trail trail={trail} direction={ship.exitDirection} width={w} height={h} progress={travel} />
       <Pressable testID={`ship-${ship.id}`} accessibilityLabel={`${ship.color} ship heading ${ship.exitDirection}`} hitSlop={PAD} onPress={() => onPress(ship.id)}>
         <ShipBody color={ship.color} symbol={ship.symbol} direction={ship.exitDirection} capacity={ship.capacity} length={vertical ? h : w} breadth={vertical ? w : h} />
       </Pressable>

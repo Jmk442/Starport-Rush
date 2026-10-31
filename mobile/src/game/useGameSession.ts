@@ -5,21 +5,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { createInitialState, step } from "@/src/game/engine";
 import { hint as solverHint } from "@/src/game/solver";
+import { DURATION_TABLE, RESULT_HOLD_MS } from "@/src/game/timing";
 import type { GameAction, GameEvent, GameState, LevelDef, ReplayRecord } from "@/src/game/types";
 import { feedbackFor } from "@/src/services/audio";
 import { bumpDiag } from "@/src/services/prefs";
 
-// Timing targets from the addendum: dispatch 300-450, dock 200-350, departure 350-600 ms.
-export const DURATION: Record<GameEvent["type"], number> = {
-  DISPATCH: 300,
-  DOCK: 200,
-  BOARD: 70,
-  QUEUE_ADVANCE: 90,
-  DEPART: 380,
-  BLOCKED: 0,
-  WIN: 0,
-  DEADLOCK: 0,
-};
+export const DURATION = DURATION_TABLE;
 
 const COMBO_WINDOW_MS = 2600;
 
@@ -47,6 +38,7 @@ export function useGameSession(level: LevelDef) {
   const [bestCombo, setBestCombo] = useState(0);
   const [mood, setMood] = useState<{ mood: Mood; n: number }>({ mood: "idle", n: 0 });
   const [log, setLog] = useState<ReplayRecord[]>([]);
+  const [resultReady, setResultReady] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const busyRef = useRef(false);
   const comboRef = useRef({ count: 0, last: 0 });
@@ -76,6 +68,7 @@ export function useGameSession(level: LevelDef) {
     }
     if (ev.type === "BOARD" && ev.seat === 1) react("cheer");
     if (!quiet) feedbackFor(ev, c);
+    if (ev.type === "WIN" || ev.type === "DEADLOCK") timers.current.push(setTimeout(() => setResultReady(true), quiet ? 0 : RESULT_HOLD_MS[ev.type]));
     if (ev.type === "WIN") {
       bumpDiag("wins");
       react("party");
@@ -109,6 +102,7 @@ export function useGameSession(level: LevelDef) {
       setCanUndo(out.history.length > 0);
       setLog((l) => [...l, out.record]);
       setHintId(null);
+      setResultReady(false);
       if (out.result === "UNDONE" || out.result === "RESTARTED") {
         comboRef.current = { count: 0, last: 0 };
         react("idle");
@@ -168,6 +162,7 @@ export function useGameSession(level: LevelDef) {
     hintId,
     combo,
     bestCombo,
+    resultReady,
     mood,
     log,
     dispatch,

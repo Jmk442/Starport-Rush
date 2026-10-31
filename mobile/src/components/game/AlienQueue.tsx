@@ -16,6 +16,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { AlienFace } from "@/src/components/game/AlienFace";
+import type { HatId } from "@/src/game/cosmetics";
 import type { Mood } from "@/src/game/useGameSession";
 import type { AlienColor, QueueGroup } from "@/src/game/types";
 import { COLOR_LABEL, COLOR_SYMBOL, SYMBOL_ICON } from "@/src/game/visuals";
@@ -42,7 +43,9 @@ const Alien = memo(function Alien({
   mood,
   jump,
   blink,
+  hat,
 }: {
+  hat: HatId;
   color: AlienColor;
   left: number;
   top: number;
@@ -65,7 +68,7 @@ const Alien = memo(function Alien({
   }));
   return (
     <Animated.View style={[styles.alien, anim]}>
-      <AlienFace color={color} size={SIZE} mood={front || mood !== "cheer" ? mood : "idle"} blink={blink} variant={variant} />
+      <AlienFace color={color} size={SIZE} mood={front || mood !== "cheer" ? mood : "idle"} blink={blink} variant={variant} hat={hat} />
     </Animated.View>
   );
 });
@@ -75,16 +78,22 @@ interface Props {
   width: number;
   height: number;
   mood: { mood: Mood; n: number };
+  hat: HatId;
 }
 
-export function AlienQueue({ queue, width, height, mood }: Props) {
+export function AlienQueue({ queue, width, height, mood, hat }: Props) {
   const styles = useStyles();
   const { colors } = useTheme();
   const total = queue.reduce((a, g) => a + g.count, 0);
   const inner = width - 32;
   const perRow = Math.max(4, Math.floor(inner / SLOT));
   const rows = Math.max(1, Math.floor((height - 40) / SLOT));
-  const capacity = Math.min(MAX_RENDERED, perRow * rows);
+  const slots = perRow * rows;
+  // when the queue overflows, the last visible slot holds the "+N" badge instead of an alien
+  const capacity = Math.min(MAX_RENDERED, total > slots ? slots - 1 : slots);
+  const badgeRow = Math.floor(capacity / perRow);
+  const badgeCol = badgeRow % 2 === 0 ? capacity % perRow : perRow - 1 - (capacity % perRow);
+  const badgePos = { left: badgeCol * SLOT, top: (rows - 1 - badgeRow) * SLOT + 8 };
   const jump = useSharedValue(0);
   const blink = useSharedValue(1);
   const [face, setFace] = useState<Mood>("idle");
@@ -150,9 +159,13 @@ export function AlienQueue({ queue, width, height, mood }: Props) {
           <View key={r} style={[styles.rail, { top: r * SLOT + SLOT / 2 + 5 }]} />
         ))}
         {aliens.map((a, idx) => (
-          <Alien key={a.key} color={a.color} left={a.left} top={a.top} front={idx === 0} variant={a.key} mood={face} jump={jump} blink={blink} />
+          <Alien key={a.key} color={a.color} left={a.left} top={a.top} front={idx === 0} variant={a.key} mood={face} jump={jump} blink={blink} hat={hat} />
         ))}
-        {total > capacity && <Text style={styles.overflow}>+{total - capacity}</Text>}
+        {total > capacity && (
+          <Text testID="queue-overflow" style={[styles.overflow, badgePos]}>
+            +{total - capacity}
+          </Text>
+        )}
         {total === 0 && <Text style={styles.cleared}>Terminal clear!</Text>}
         {bubble && head && (
           <View testID="alien-speech-bubble" style={[styles.bubble, { left: Math.max(4, head.left - 6), top: Math.max(2, head.top - 30) }]}>
@@ -174,7 +187,7 @@ const useStyles = makeStyles((c) => ({
   lane: { alignSelf: "center", marginTop: 4, backgroundColor: c.surfaceSecondary, borderRadius: radius.md, overflow: "hidden" },
   rail: { position: "absolute", left: 8, right: 8, height: 2, backgroundColor: c.border, opacity: 0.8 },
   alien: { position: "absolute", top: 9, left: 0, width: SIZE, alignItems: "center" },
-  overflow: { position: "absolute", right: 6, top: 4, fontFamily: fonts.display, color: c.onSurface, fontSize: 12 },
+  overflow: { position: "absolute", width: SLOT, textAlign: "center", lineHeight: SLOT - 6, fontFamily: fonts.display, color: c.onSurface, fontSize: 11 },
   cleared: { position: "absolute", alignSelf: "center", top: "40%", fontFamily: fonts.display, color: c.success, fontSize: 14 },
   bubble: {
     position: "absolute",

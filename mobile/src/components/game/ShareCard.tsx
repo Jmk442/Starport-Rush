@@ -8,6 +8,7 @@ import { ActivityIndicator, Platform, Pressable, Share, Text, View } from "react
 import { captureRef } from "react-native-view-shot";
 
 import { AlienFace } from "@/src/components/game/AlienFace";
+import type { HatId } from "@/src/game/cosmetics";
 import type { AlienColor } from "@/src/game/types";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
 
@@ -18,13 +19,15 @@ export interface ShareData {
   stars: number;
   bestCombo: number;
   seconds: number;
+  handle: string;
+  hat: HatId;
 }
 
 const CREW: AlienColor[] = ["cyan", "pink", "yellow", "green", "purple"];
 
 export function shareText(d: ShareData) {
   const stars = "★".repeat(d.stars) + "☆".repeat(3 - d.stars);
-  return `STARPORT RUSH · Level ${d.levelId} "${d.levelName}"\nCleared in ${d.moves} moves ${stars}${d.bestCombo >= 2 ? ` · combo ×${d.bestCombo}` : ""} · ${d.seconds}s\nCan you launch faster? 🚀`;
+  return `@${d.handle} cleared STARPORT RUSH · Level ${d.levelId} "${d.levelName}"\nCleared in ${d.moves} moves ${stars}${d.bestCombo >= 2 ? ` · combo ×${d.bestCombo}` : ""} · ${d.seconds}s\nCan you launch faster? 🚀`;
 }
 
 export function ShareCardModal({ data, onClose }: { data: ShareData | null; onClose: () => void }) {
@@ -70,10 +73,13 @@ export function ShareCardModal({ data, onClose }: { data: ShareData | null; onCl
             <View style={styles.crew}>
               {CREW.map((c, i) => (
                 <View key={c} style={{ transform: [{ translateY: i % 2 ? -6 : 0 }, { rotate: `${(i - 2) * 6}deg` }] }}>
-                  <AlienFace color={c} size={34} mood="party" variant={i} />
+                  <AlienFace color={c} size={34} mood="party" variant={i} hat={data.hat} />
                 </View>
               ))}
             </View>
+            <Text style={styles.handle} testID="share-card-handle">
+              @{data.handle}
+            </Text>
             <Text style={styles.cleared} testID="share-card-moves">
               Cleared in {data.moves} moves
             </Text>
@@ -128,6 +134,7 @@ const useStyles = makeStyles((c) => ({
   brand: { fontFamily: fonts.display, fontSize: 28, color: c.onSurface, letterSpacing: 2, textShadowColor: c.brandPrimary, textShadowRadius: 12 },
   level: { fontFamily: fonts.display, fontSize: 11, color: c.brandPrimary, letterSpacing: 2, marginTop: 4 },
   crew: { flexDirection: "row", gap: 6, marginTop: 24, marginBottom: 16, alignItems: "flex-end" },
+  handle: { fontFamily: fonts.display, fontSize: 16, color: c.yellow, marginBottom: 4 },
   cleared: { fontFamily: fonts.display, fontSize: 26, color: c.onSurface },
   stars: { flexDirection: "row", gap: 6, marginTop: 8 },
   statsRow: { flexDirection: "row", gap: 12, marginTop: 16, alignSelf: "stretch" },

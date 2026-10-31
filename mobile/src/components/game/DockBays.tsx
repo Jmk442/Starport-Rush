@@ -3,7 +3,9 @@ import { Text, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 
 import { ShipBody } from "@/src/components/game/ShipBody";
+import { Trail } from "@/src/components/game/Trail";
 import type { GameState, Ship } from "@/src/game/types";
+import { usePrefs } from "@/src/services/prefs";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
 
 function Seats({ ship, size, compact }: { ship: Ship; size: number; compact: boolean }) {
@@ -27,22 +29,27 @@ function Seats({ ship, size, compact }: { ship: Ship; size: number; compact: boo
 
 function DockedShip({ ship, h, leaving, compact }: { ship: Ship; h: number; leaving: boolean; compact: boolean }) {
   const styles = useStyles();
+  const { trail } = usePrefs();
   const enter = useSharedValue(0);
   const fly = useSharedValue(0);
   useEffect(() => {
     enter.value = withSpring(1, { damping: 11, stiffness: 320 });
   }, [enter]);
   useEffect(() => {
-    if (leaving) fly.value = withTiming(1, { duration: 380, easing: Easing.in(Easing.cubic) });
+    if (leaving) fly.value = withTiming(1, { duration: 600, easing: Easing.in(Easing.cubic) });
   }, [leaving, fly]);
   const anim = useAnimatedStyle(() => ({
-    opacity: (leaving ? 1 - fly.value : 1) * Math.min(1, enter.value),
+    opacity: (leaving ? 1 - fly.value * fly.value : 1) * Math.min(1, enter.value),
     transform: [{ scale: 0.5 + 0.5 * enter.value + (leaving ? fly.value * 0.15 : 0) }, { translateY: -fly.value * h * 1.8 }],
   }));
   const len = compact ? h * 0.5 : h * 0.78;
+  const breadth = len * (ship.capacity === 8 ? 0.7 : 0.52);
   return (
     <Animated.View style={[compact ? styles.dockedCompact : styles.docked, anim]}>
-      <ShipBody color={ship.color} symbol={ship.symbol} direction="NORTH" capacity={ship.capacity} length={len} breadth={len * (ship.capacity === 8 ? 0.7 : 0.52)} />
+      <View>
+        {leaving && <Trail trail={trail} direction="NORTH" width={breadth} height={len} progress={fly} />}
+        <ShipBody color={ship.color} symbol={ship.symbol} direction="NORTH" capacity={ship.capacity} length={len} breadth={breadth} />
+      </View>
       <Seats ship={ship} size={compact ? 8 : Math.min(12, h * 0.16)} compact={compact} />
     </Animated.View>
   );
@@ -61,7 +68,7 @@ function BayPad({ index, state, h, compact }: { index: number; state: GameState;
       const now = state.ships.find((s) => s.id === p.id);
       if (now?.status === "DEPARTED") {
         setGhost({ ...p, boarded: p.capacity });
-        const t = setTimeout(() => setGhost(null), 420);
+        const t = setTimeout(() => setGhost(null), 650);
         prev.current = ship;
         return () => clearTimeout(t);
       }

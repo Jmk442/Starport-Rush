@@ -1,0 +1,36 @@
+{
+  "summary": "Round 3 test of STARPORT RUSH (offline Expo game) on the web preview at 375x667 and 390x844, plus the Node model tests. Engine tests: 56 passed, 0 failed. Audio-session model: reproduced with the old policy (1317/2000 play-throughs silenced) and 0/2000 with the fix. All requested flows pass: (1) Handle: auto-generated (e.g. TurboSnorf24), edited in settings, invalid input shows the error hint, input is sanitized and capped at 16 chars, an invalid value is not saved on Done, reroll works, the value persists after reload and shows on home and the share card. (2) Levels: 15 tiles in 3 rows with progressive unlock. L6, L10 and L15 win with expectedSolution (3 stars). L15 shows 'Starport Legend!' then 'All Sectors Cleared', returning to home-notice with a single home screen. (3) Result hold: banner to victory overlay measured at 1079ms; the deadlock overlay appears after the jam. (4) Cosmetics: hangar totals and lock states are correct. At 9 stars, party, propeller, sparkle and bubbles are unlocked; locked tiles are disabled; equip shows 'Equipped' and is saved to sr_hat/sr_trail. The victory overlay shows the unlock at each threshold (L1: Party Cone; L2: Propeller+Sparkles; L3: Bubbles). The equipped hat appears on queue aliens, victory aliens and the share card. (5) Music: on web, status reads 'playing' at the start of L1, L2 and L3 (via victory-next) and still 'playing' 11s into L3. (6) Layout: no testID element leaves the viewport on L15 at either size, and the hangar has no horizontal overflow.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AlienQueue overflow badge", "issue": "The '+N' overflow count (+7 on L6, +17 on L10, +25/+3 on L15) is drawn absolutely at right:6/top:4 on top of the top-right alien's head/antenna. It overlaps instead of having its own slot.", "testID": "alien-queue", "priority": "LOW"},
+      {"component": "SettingsSheet on small screens with keyboard", "issue": "At 375x667 the sheet is about 653px tall, nearly the full screen (the backdrop is barely visible), and it has no ScrollView. On iOS, KeyboardAvoidingView 'padding' with a keyboard of about 260px will push the top of the sheet, including settings-handle-input, off-screen. On shorter devices the Done button would be clipped. This can't be verified on web. Suggestion: wrap the sheet content in a ScrollView or cap it at maxHeight.", "testID": "settings-handle-input", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Hangar (375 wide)", "issues": ["Tile names are truncated with an ellipsis: 'Propeller Bea...', 'Fishbowl Helm...', 'Standard Exh...', 'Confetti Cann...'. Blurbs are truncated too ('Every launch is a ...'). They fit at 390. Consider 2 lines or a smaller font."]},
+      {"screen": "Victory overlay", "issues": ["The unlock copy says 'Equip it in the Hangar' even when several items unlock ('Propeller Beanie, Star Sparkles! Equip it...'). Use 'them' when there is more than one.", "The third star is noticeably smaller than stars 1 and 2, which looks asymmetric. It may be intentional."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/mobile/tests/engine.test.ts", "/app/mobile/tests/audio_session_model.ts"],
+  "action_items": [
+    "MEDIUM: make SettingsSheet scrollable or cap its height so the handle input stays visible above the iOS keyboard on iPhone SE.",
+    "LOW: give the AlienQueue '+N' overflow badge its own space (for example, reserve the last slot) so it doesn't sit on an alien.",
+    "LOW: fix hangar tile name truncation at 375 wide.",
+    "LOW: pluralize the victory unlock text."
+  ],
+  "critical_code_review_comments": [
+    "audio.ts: music is owned by the root layout (useMusicController) with a 1.5s watchdog, and all players use keepAudioSessionActive. The design matches the model test. The watchdog calls play() even when the user's device is muted or in silent mode with playsInSilentMode:false, which is harmless.",
+    "game.tsx unlock effect: 'before' is read from getPrefs() just before recordStars, so a replay at the same star count correctly shows no unlock. Works on web; under React StrictMode the double-invoked effect would compute an empty diff on the second run and hide the unlock banner.",
+    "useMusicController: on web the initial 'active' value is forced true, but the AppState listener then sets active = (s === 'active'), so after a tab switch the music resumes only when the tab is active again. Fine.",
+    "sanitizeHandle strips invalid characters while typing, so the error hint only covers length (<3). That is acceptable, but users get no feedback that characters were dropped."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100% of requested flows (1 medium risk, 4 low polish items)"},
+  "seed_data_creation": "none (set localStorage sr_stars_1..14=2 and sr_hat for unlock/hat checks; fresh browser context each run)",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Each browser_automation call gets a fresh context. localStorage values are JSON (sr_handle='\"Name\"', sr_hat='\"propeller\"', sr_stars_N='3'). The settings sheet slides in, so wait about 800ms before clicking settings-close-button or it is reported 'outside of the viewport'. Solutions: L2 pink-01,green-01,cyan-02,yellow-01,cyan-01; L3 yellow-01,purple-02,pink-01,orange-01,purple-01,cyan-01; L6-15 are in levels_extra.ts. 2.65s between taps works. Measure the banner timing with an in-page rAF observer (Playwright polling adds about 300ms).",
+  "rca_of_issue": "N/A - no functional bugs found."
+}

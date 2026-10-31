@@ -1,11 +1,21 @@
 // Original synthesized sounds (scripts/gen_sounds.py) + haptics.
 // Music, SFX and haptics are independently toggled via prefs.
+//
+// Round 3 music fix (iPhone): expo-audio's iOS module deactivates the shared
+// AVAudioSession 100 ms after any non-keepalive player finishes or is paused,
+// if at that instant no player reports .playing. Short SFX ending while the
+// music loop hands off / re-primes after a level-change pause() killed the
+// music for good. Now: every player keeps the session active, music is owned by
+// the root layout (never paused on level change) and a watchdog re-plays it.
+// Reproduction model: tests/audio_session_model.ts.
+const PLAYER_OPTS = { keepAudioSessionActive: true };
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
-import { Platform } from "react-native";
+import { useEffect } from "react";
+import { AppState, Platform } from "react-native";
 
 import type { GameEvent } from "@/src/game/types";
-import { getPrefs } from "@/src/services/prefs";
+import { getPrefs, usePrefs } from "@/src/services/prefs";
 
 const SOURCES = {
   tap: require("../../assets/sounds/tap.wav"),
@@ -40,14 +50,14 @@ let modeSet = false;
 function ensureMode() {
   if (modeSet) return;
   modeSet = true;
-  setAudioModeAsync({ playsInSilentMode: false }).catch(() => {});
+  setAudioModeAsync({ playsInSilentMode: false, interruptionMode: "mixWithOthers", shouldPlayInBackground: false }).catch(() => {});
 }
 
 export function playSfx(name: Sfx, volume = 0.8) {
   if (!getPrefs().sfx) return;
   try {
     ensureMode();
-    const p = players[name] ?? (players[name] = createAudioPlayer(SOURCES[name]));
+    const p = players[name] ?? (players[name] = createAudioPlayer(SOURCES[name], PLAYER_OPTS));
     p.volume = volume;
     p.seekTo(0).catch(() => {});
     p.play();
@@ -62,7 +72,7 @@ export function syncMusic(active: boolean) {
     if (want) {
       ensureMode();
       if (!music) {
-        music = createAudioPlayer(require("../../assets/sounds/music.wav"));
+        music = createAudioPlayer(require("../../assets/sounds/music.wav"), PLAYER_OPTS);
         music.loop = true;
         music.volume = 0.3;
       }
@@ -71,6 +81,32 @@ export function syncMusic(active: boolean) {
   } catch {
     // ignore
   }
+}
+
+export function musicStatus(): "playing" | "stopped" | "off" {
+  if (!getPrefs().music) return "off";
+  return music?.playing ? "playing" : "stopped";
+}
+
+/** Root-level music owner: loops across all screens/levels, pauses in background, self-heals. */
+export function useMusicController() {
+  const { music: on, loaded } = usePrefs();
+  useEffect(() => {
+    if (!loaded) return;
+    let active = AppState.currentState === "active" || Platform.OS === "web";
+    syncMusic(active && on);
+    const sub = AppState.addEventListener("change", (s) => {
+      active = s === "active";
+      syncMusic(active && on);
+    });
+    const watchdog = setInterval(() => {
+      if (active && on && music && !music.playing) syncMusic(true);
+    }, 1500);
+    return () => {
+      sub.remove();
+      clearInterval(watchdog);
+    };
+  }, [on, loaded]);
 }
 
 type HapticKind = "light" | "medium" | "heavy" | "rigid" | "success" | "error" | "warning";

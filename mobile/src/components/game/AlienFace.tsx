@@ -3,6 +3,8 @@ import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { View } from "react-native";
 import Animated, { type SharedValue, useAnimatedStyle } from "react-native-reanimated";
 
+import { FishbowlOverlay, Hat } from "@/src/components/game/Hat";
+import type { HatId } from "@/src/game/cosmetics";
 import type { Mood } from "@/src/game/useGameSession";
 import type { AlienColor } from "@/src/game/types";
 import { COLOR_SYMBOL, SYMBOL_ICON } from "@/src/game/visuals";
@@ -14,9 +16,10 @@ interface Props {
   mood: Mood;
   blink?: SharedValue<number>;
   variant?: number; // per-alien goofiness (eye size / antenna lean)
+  hat?: HatId;
 }
 
-export function AlienFace({ color, size, mood, blink, variant = 0 }: Props) {
+export function AlienFace({ color, size, mood, blink, variant = 0, hat = "none" }: Props) {
   const styles = useStyles();
   const { colors } = useTheme();
   const shocked = mood === "shock";
@@ -36,9 +39,15 @@ export function AlienFace({ color, size, mood, blink, variant = 0 }: Props) {
 
   return (
     <View style={{ width: size, alignItems: "center" }}>
-      <View style={[styles.antenna, { height: size * 0.22, transform: [{ rotate: lean }], backgroundColor: colors[color] }]}>
-        <View style={[styles.antennaBall, { backgroundColor: colors[color], width: size * 0.2, height: size * 0.2, borderRadius: size }]} />
-      </View>
+      {hat !== "none" && hat !== "fishbowl" ? (
+        <View style={{ marginBottom: -size * 0.06 }}>
+          <Hat id={hat} size={size} />
+        </View>
+      ) : (
+        <View style={[styles.antenna, { height: size * 0.22, transform: [{ rotate: lean }], backgroundColor: colors[color] }]}>
+          <View style={[styles.antennaBall, { backgroundColor: colors[color], width: size * 0.2, height: size * 0.2, borderRadius: size }]} />
+        </View>
+      )}
       <View style={[styles.body, { width: size, height: size * 0.92, borderRadius: size / 2, backgroundColor: colors[color] }]}>
         {mood === "grumpy" && (
           <View style={styles.brows}>
@@ -60,6 +69,7 @@ export function AlienFace({ color, size, mood, blink, variant = 0 }: Props) {
           </View>
         )}
       </View>
+      {hat === "fishbowl" && <FishbowlOverlay size={size} />}
     </View>
   );
 }

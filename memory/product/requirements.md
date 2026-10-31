@@ -40,3 +40,13 @@ User's words: "Game Feel Polish: Make the game snappier with a combo chain, pitc
 "Build Levels 2-5: Approve Stage 1 and add Levels 2-5 with bigger ships and more docking bays" (levels 2-5 as specified in /app/memory/product/full_spec.md master prompt section 8: each solver-verified, solution traces saved, passenger totals per colour matching capacity exactly)
 "Share Card: Add a shareable 'Cleared in 3 moves ★★★' card so friends can compete"
 Earlier direction: snappy arcade vibe, humorous aliens, user wants it polished; focus on how it feels to play.
+
+## Round 3
+User's words:
+"a handle" (share card shows a player handle; user can set it)
+"More Levels: Add 10 more levels that ramp up the difficulty gradually"
+"Alien Skins: Let players unlock silly alien hats and ship trails by earning stars"
+"iPhone Fixes: Fix any feel or layout issues you find after testing on your phone, the music stopped all of a sudden on level three. Just wait a second longer when clearing a little to see the graphics"
+Bug: on a real iPhone in Expo Go, the background music stopped suddenly while playing level 3 (music setting was on). Expected: music keeps looping across levels and screens. Reproduce first, fix, re-verify.
+Feel: when clearing (ship departure / level clear), hold about one second longer so the graphics can be seen before moving on.
+Handle detail (user's words): "auto-generated funny one like 'SneakyGlorp42' unchangeable if you want. Choose your own if you want." (Auto-generate a funny handle by default; the player may keep it or choose their own.)

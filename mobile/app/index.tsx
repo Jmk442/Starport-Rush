@@ -7,7 +7,9 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AlienFace } from "@/src/components/game/AlienFace";
 import { SettingsSheet } from "@/src/components/SettingsSheet";
+import { totalStars } from "@/src/game/cosmetics";
 import { LEVELS, TOTAL_PLANNED_LEVELS } from "@/src/game/levels";
 import { usePrefs } from "@/src/services/prefs";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
@@ -23,7 +25,7 @@ export default function Home() {
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    if (params.stage === "complete") setNotice("All 5 sectors cleared! You're officially a Starport legend.");
+    if (params.stage === "complete") setNotice(`All ${LEVELS.length} sectors cleared! You're officially a Starport legend.`);
   }, [params.stage]);
 
   const unlocked = (id: number) => LEVELS.some((l) => l.levelId === id) && (id === 1 || (prefs.stars[id - 1] ?? 0) > 0);
@@ -36,7 +38,17 @@ export default function Home() {
       <LinearGradient colors={["transparent", colors.surface]} locations={[0.25, 0.75]} style={styles.bg} />
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
         <View style={styles.topRow}>
+          <View testID="home-handle" style={styles.handleChip}>
+            <AlienFace color="green" size={22} mood="cheer" hat={prefs.hat} />
+            <Text style={styles.handleText} numberOfLines={1}>
+              @{prefs.handle}
+            </Text>
+          </View>
           <View style={styles.flex} />
+          <Pressable testID="home-hangar-button" onPress={() => router.push("/hangar")} style={[styles.iconBtn, styles.hangarBtn]} hitSlop={8}>
+            <Ionicons name="shirt" size={20} color={colors.onSurface} />
+            <Text style={styles.hangarText}>{totalStars(prefs.stars)}★</Text>
+          </Pressable>
           <Pressable testID="home-settings-button" onPress={() => setSettingsOpen(true)} style={styles.iconBtn} hitSlop={8}>
             <Ionicons name="settings-sharp" size={22} color={colors.onSurface} />
           </Pressable>
@@ -65,7 +77,7 @@ export default function Home() {
             const available = unlocked(id);
             const stars = prefs.stars[id] ?? 0;
             return (
-              <Animated.View key={id} entering={FadeInDown.delay(150 + i * 70).duration(400)} style={styles.tileWrap}>
+              <Animated.View key={id} entering={FadeInDown.delay(150 + i * 40).duration(400)} style={styles.tileWrap}>
                 <Pressable
                   testID={`level-tile-${id}`}
                   disabled={!available}
@@ -77,7 +89,7 @@ export default function Home() {
                       <Text style={styles.tileNum}>{id}</Text>
                       <View style={styles.tileStars}>
                         {[0, 1, 2].map((s) => (
-                          <Ionicons key={s} name={s < stars ? "star" : "star-outline"} size={12} color={s < stars ? colors.yellow : colors.muted} />
+                          <Ionicons key={s} name={s < stars ? "star" : "star-outline"} size={10} color={s < stars ? colors.yellow : colors.muted} />
                         ))}
                       </View>
                     </>
@@ -107,19 +119,23 @@ const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surface },
   bg: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
   content: { flexGrow: 1, paddingHorizontal: 24 },
-  topRow: { flexDirection: "row" },
+  topRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  handleChip: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: c.surfaceSecondary + "CC", borderRadius: radius.pill, paddingLeft: 8, paddingRight: 12, height: 44, flexShrink: 1 },
+  handleText: { fontFamily: fonts.display, fontSize: 14, color: c.yellow, flexShrink: 1 },
+  hangarBtn: { width: undefined, paddingHorizontal: 12, flexDirection: "row", gap: 6 },
+  hangarText: { fontFamily: fonts.display, fontSize: 14, color: c.yellow },
   flex: { flex: 1 },
   iconBtn: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: c.surfaceSecondary + "CC", alignItems: "center", justifyContent: "center" },
   kicker: { fontFamily: fonts.display, fontSize: 12, letterSpacing: 3, color: c.brandPrimary, marginTop: 24 },
   title: { fontFamily: fonts.display, fontSize: 52, lineHeight: 54, color: c.onSurface, marginTop: 8, textShadowColor: c.brandPrimary, textShadowRadius: 18 },
   tagline: { fontFamily: fonts.text, fontSize: 15, lineHeight: 22, color: c.onSurfaceSecondary, marginTop: 12, maxWidth: 300 },
-  spacer: { flex: 1, minHeight: 120 },
+  spacer: { flex: 1, minHeight: 48 },
   notice: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: c.surfaceSecondary, borderRadius: radius.md, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: c.brandPrimary },
   noticeText: { flex: 1, fontFamily: fonts.text, fontSize: 13, color: c.onSurface },
   section: { fontFamily: fonts.display, fontSize: 16, color: c.onSurface, marginBottom: 12 },
-  grid: { flexDirection: "row", gap: 8, marginBottom: 24 },
-  tileWrap: { flex: 1 },
-  tile: { aspectRatio: 0.85, borderRadius: radius.md, alignItems: "center", justifyContent: "center", gap: 4, borderWidth: 1 },
+  grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 8, marginBottom: 24 },
+  tileWrap: { width: "18%" },
+  tile: { aspectRatio: 0.9, borderRadius: radius.md, alignItems: "center", justifyContent: "center", gap: 2, borderWidth: 1 },
   tileOpen: { backgroundColor: c.surfaceSecondary, borderColor: c.brandPrimary },
   tileLocked: { backgroundColor: c.surfaceSecondary + "99", borderColor: c.border },
   tileNum: { fontFamily: fonts.display, fontSize: 24, color: c.onSurface },

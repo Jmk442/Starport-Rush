@@ -9,6 +9,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { ErrorBoundary } from "@/src/components/error-boundary";
 import { queryClient } from "@/src/query-client";
+import { useMusicController } from "@/src/services/audio";
 import { loadPrefs } from "@/src/services/prefs";
 import { useTheme } from "@/src/theme";
 
@@ -25,6 +26,7 @@ export default function RootLayout() {
   useEffect(() => {
     loadPrefs();
   }, []);
+  useMusicController();
   if (!loaded && !error) return null;
 
   // One app level ErrorBoundary; a render crash shows a reload screen

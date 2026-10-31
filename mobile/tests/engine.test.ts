@@ -192,7 +192,7 @@ for (const level of LEVELS) {
     });
 }
 
-test("difficulty ramps: winning-path ratio strictly decreases from level 2 to 5", () => {
+test("difficulty ramps: winning-path ratio strictly decreases from level 2 to the last level", () => {
   const ratios = LEVELS.filter((l) => l.levelId > 1).map((l) => countPaths(createInitialState(l)).ratio);
   for (let i = 1; i < ratios.length; i++) ok(ratios[i] < ratios[i - 1], `ratios ${ratios.map((r) => r.toFixed(3)).join(",")}`);
 });
@@ -200,7 +200,10 @@ test("difficulty ramps: winning-path ratio strictly decreases from level 2 to 5"
 test("bigger ships and more bays appear in later levels", () => {
   ok(LEVELS.some((l) => l.ships.some((s) => s.capacity === 6)), "cruiser present");
   ok(LEVELS.some((l) => l.ships.some((s) => s.capacity === 8)), "galaxy transport present");
-  eq(LEVELS.map((l) => l.dockingBayCount), [2, 3, 3, 3, 4]);
+  eq(LEVELS.slice(0, 5).map((l) => l.dockingBayCount), [2, 3, 3, 3, 4]);
+  eq(LEVELS.map((l) => l.levelId), Array.from({ length: LEVELS.length }, (_, i) => i + 1), "contiguous ids");
+  ok(LEVELS.length === 15, `15 levels (got ${LEVELS.length})`);
+  for (let i = 1; i < LEVELS.length; i++) ok(LEVELS[i].ships.length >= LEVELS[i - 1].ships.length - 1, "ship count ramps");
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

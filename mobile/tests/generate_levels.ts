@@ -6,6 +6,7 @@ import { countPaths, solve } from "../src/game/solver";
 import type { AlienColor, Direction, LevelDef, ShapeSymbol, ShipDef } from "../src/game/types";
 
 declare const console: { log: (...a: unknown[]) => void };
+declare const process: { argv: string[] };
 
 const SYMBOL: Record<AlienColor, ShapeSymbol> = {
   cyan: "triangle", yellow: "star", orange: "square", pink: "circle",
@@ -92,10 +93,43 @@ const SPECS: Spec[] = [
     ships: [{ color: "purple", cap: 8 }, { color: "orange", cap: 6 }, { color: "cyan", cap: 4 }, { color: "blue", cap: 6 }, { color: "red", cap: 8 }, { color: "green", cap: 4 }, { color: "yellow", cap: 4 }, { color: "pink", cap: 4 }, { color: "cyan", cap: 4 }] },
 ];
 
-for (const spec of SPECS) {
+
+// Levels 6-15: gradual ramp. Target win-path ratio decreases ~15-20% per level.
+const PALETTE: AlienColor[] = ["cyan", "yellow", "pink", "green", "orange", "purple", "blue", "red"];
+function fleet(n: number, galaxies: number, cruisers: number, colours: number, offset: number) {
+  const out: { color: AlienColor; cap: 4 | 6 | 8 }[] = [];
+  for (let i = 0; i < n; i++) {
+    const cap: 4 | 6 | 8 = i < galaxies ? 8 : i < galaxies + cruisers ? 6 : 4;
+    out.push({ color: PALETTE[(i + offset) % colours], cap });
+  }
+  return out;
+}
+const RAMP: [number, string, number, number, number, number, number, number, number?][] = [
+  // id, name, bays, ships, galaxies, cruisers, colours, min ratio, max ratio (default: target ±20%)
+  [6, "Comet Carousel", 3, 8, 1, 2, 5, 0.036],
+  [7, "Nebula Nook", 4, 8, 1, 3, 6, 0.03],
+  [8, "Asteroid Alley", 4, 9, 1, 2, 6, 0.0195, 0.03],
+  [9, "Orbit Overflow", 4, 9, 2, 2, 6, 0.021],
+  [10, "Wormhole Waltz", 4, 10, 1, 3, 7, 0.017],
+  [11, "Gravity Gridlock", 3, 10, 1, 2, 7, 0.014],
+  [12, "Pulsar Parade", 4, 10, 2, 3, 7, 0.011],
+  [13, "Meteor Mayhem", 4, 10, 2, 3, 6, 0.0075, 0.0118],
+  [14, "Quasar Queue", 4, 10, 2, 3, 7, 0.0055, 0.0084],
+  [15, "Big Bang Boulevard", 4, 10, 2, 3, 7, 0.002, 0.0054],
+  // extra search variants for the hardest level (picked result is renumbered to 15)
+  [115, "Big Bang Boulevard", 4, 10, 2, 3, 6, 0.0015, 0.0055],
+  [215, "Big Bang Boulevard", 3, 10, 2, 3, 6, 0.0015, 0.0055],
+  [315, "Big Bang Boulevard", 4, 11, 2, 3, 7, 0.0015, 0.0055],
+];
+for (const [levelId, name, bays, n, g, c, colours, lo, hi] of RAMP)
+  SPECS.push({ levelId, name, size: 7, bays, ships: fleet(n, g, c, colours, levelId), minWinRatio: hi ? lo : lo * 0.8, maxWinRatio: hi ?? lo * 1.2 });
+
+const only = process.argv.slice(2).map(Number);
+for (const spec of SPECS.filter((x) => only.length === 0 || only.includes(x.levelId))) {
   let best: { level: LevelDef; ratio: number; wins: number; total: number; seed: number; initial: number } | null = null;
   const target = (spec.minWinRatio + spec.maxWinRatio) / 2;
-  for (let seed = 1; seed <= 4000; seed++) {
+  let minSeen = 1;
+  for (let seed = 1; seed <= (spec.levelId > 12 ? 6000 : spec.levelId > 5 ? 3000 : 4000); seed++) {
     const r = rng(seed * 31 + spec.levelId);
     const ships = place(spec, r);
     if (!ships) continue;
@@ -109,11 +143,12 @@ for (const spec of SPECS) {
     const sol = solve(st);
     if (!sol.solvable) continue;
     const p = countPaths(st);
+    minSeen = Math.min(minSeen, p.ratio);
     if (p.ratio < spec.minWinRatio || p.ratio > spec.maxWinRatio) continue;
     level.expectedSolution = sol.solution;
     if (!best || Math.abs(p.ratio - target) < Math.abs(best.ratio - target)) best = { level, ...p, seed, initial };
   }
-  if (!best) console.log(`LEVEL ${spec.levelId}: NO CANDIDATE`);
+  if (!best) console.log(`LEVEL ${spec.levelId}: NO CANDIDATE (lowest solvable ratio seen ${minSeen.toFixed(4)})`);
   else {
     console.log(`LEVEL ${spec.levelId} seed=${best.seed} winPaths=${best.wins}/${best.total} ratio=${best.ratio.toFixed(3)} initialMoves=${best.initial}`);
     console.log(JSON.stringify(best.level));

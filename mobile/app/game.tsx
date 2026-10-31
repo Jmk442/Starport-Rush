@@ -2,6 +2,7 @@ import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, Text, useWindowDimensions, View } from "react-native";
+import Animated, { ZoomIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AlienFace } from "@/src/components/game/AlienFace";
@@ -14,12 +15,12 @@ import { LaunchYard } from "@/src/components/game/LaunchYard";
 import { ResultOverlay } from "@/src/components/game/ResultOverlay";
 import { SettingsSheet } from "@/src/components/SettingsSheet";
 import { Starfield } from "@/src/components/Starfield";
+import { newlyUnlocked, totalStars } from "@/src/game/cosmetics";
 import { getLevel, LEVEL_1, LEVELS } from "@/src/game/levels";
 import type { LevelDef } from "@/src/game/types";
 import { starsFor, useGameSession } from "@/src/game/useGameSession";
 import { COLOR_LABEL } from "@/src/game/visuals";
-import { syncMusic } from "@/src/services/audio";
-import { recordStars, usePrefs } from "@/src/services/prefs";
+import { getPrefs, recordStars, usePrefs } from "@/src/services/prefs";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
 
 export default function GameScreen() {
@@ -49,15 +50,16 @@ function GameBody({ level }: { level: LevelDef }) {
   };
   const baysFull = display.bays.every((b) => b !== null);
 
-  useEffect(() => {
-    syncMusic(true);
-    return () => syncMusic(false);
-  }, [prefs.music]);
 
   const stars = display.status === "WON" ? starsFor(display) : 0;
+  const [unlocks, setUnlocks] = useState<string[]>([]);
   useEffect(() => {
-    if (display.status === "WON") recordStars(level.levelId, stars);
+    if (display.status !== "WON") return;
+    const before = totalStars(getPrefs().stars);
+    recordStars(level.levelId, stars);
+    setUnlocks(newlyUnlocked(before, totalStars(getPrefs().stars)).map((c) => c.name));
   }, [display.status, stars, level.levelId]);
+  const won = display.status === "WON";
 
   // Portrait split: 30% queue, 15% docks, 45% yard, 10% controls (safe-area aware).
   const avail = height - insets.top - insets.bottom;
@@ -80,7 +82,7 @@ function GameBody({ level }: { level: LevelDef }) {
             </Pressable>
             <View style={styles.titleWrap}>
               <Text style={styles.levelNum}>LEVEL {level.levelId}</Text>
-              <Text style={styles.levelName} testID="game-level-name">
+              <Text style={styles.levelName} testID="game-level-name" numberOfLines={1}>
                 {level.name}
               </Text>
             </View>
@@ -91,7 +93,7 @@ function GameBody({ level }: { level: LevelDef }) {
               <Text style={styles.movesLabel}>moves</Text>
             </View>
           </View>
-          <AlienQueue queue={display.queue} width={width} height={queueH - 52} mood={session.mood} />
+          <AlienQueue queue={display.queue} width={width} height={queueH - 52} mood={session.mood} hat={prefs.hat} />
         </View>
         <DockBays state={display} height={dockH} />
         <View style={{ height: yardH }}>
@@ -104,6 +106,11 @@ function GameBody({ level }: { level: LevelDef }) {
             onTap={(id) => session.dispatch({ type: "TAP_SHIP", shipId: id })}
           />
           <ComboPopup combo={session.combo} />
+          {won && !session.resultReady && (
+            <Animated.View entering={ZoomIn.springify().damping(9)} pointerEvents="none" style={styles.clearBanner} testID="sector-clear-banner">
+              <Text style={styles.clearText}>SECTOR CLEAR!</Text>
+            </Animated.View>
+          )}
         </View>
         <ControlBar
           height={ctrlH}
@@ -116,7 +123,7 @@ function GameBody({ level }: { level: LevelDef }) {
         />
       </View>
 
-      {display.status === "WON" && (
+      {won && session.resultReady && (
         <ResultOverlay
           kind="victory"
           title={isLast ? "Starport Legend!" : "Launch Complete!"}
@@ -135,6 +142,8 @@ function GameBody({ level }: { level: LevelDef }) {
                   stars,
                   bestCombo: session.bestCombo,
                   seconds: Math.round(session.elapsedMs() / 1000),
+                  handle: prefs.handle,
+                  hat: prefs.hat,
                 }),
             },
             { id: "replay", label: "Replay", onPress: () => session.dispatch({ type: "RESTART" }) },
@@ -143,14 +152,22 @@ function GameBody({ level }: { level: LevelDef }) {
           <View style={styles.party}>
             {PARTY.map((c, i) => (
               <View key={c} style={{ transform: [{ translateY: i % 2 ? -8 : 0 }, { rotate: `${(i - 1.5) * 10}deg` }] }}>
-                <AlienFace color={c} size={30} mood="party" variant={i} />
+                <AlienFace color={c} size={30} mood="party" variant={i} hat={prefs.hat} />
               </View>
             ))}
           </View>
+          {unlocks.length > 0 && (
+            <View style={styles.unlock} testID="victory-unlock">
+              <Ionicons name="gift" size={16} color={colors.yellow} />
+              <Text style={styles.unlockText} numberOfLines={2}>
+                Unlocked: {unlocks.join(", ")}! Equip {unlocks.length > 1 ? "them" : "it"} in the Hangar.
+              </Text>
+            </View>
+          )}
         </ResultOverlay>
       )}
       <ShareCardModal data={shareData} onClose={() => setShareData(null)} />
-      {display.status === "DEADLOCK" && (
+      {display.status === "DEADLOCK" && session.resultReady && (
         <ResultOverlay
           kind="deadlock"
           title="Terminal Jammed"
@@ -173,6 +190,10 @@ function GameBody({ level }: { level: LevelDef }) {
 const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surface },
   party: { flexDirection: "row", gap: 8, marginTop: 16, alignItems: "flex-end" },
+  unlock: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12, backgroundColor: c.surfaceTertiary, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8, alignSelf: "stretch" },
+  unlockText: { flex: 1, fontFamily: fonts.text, fontSize: 13, color: c.onSurface },
+  clearBanner: { position: "absolute", top: "62%", left: 0, right: 0, alignItems: "center" },
+  clearText: { fontFamily: fonts.display, fontSize: 38, color: c.success, textShadowColor: c.success, textShadowRadius: 18, letterSpacing: 2 },
   topBar: { flexDirection: "row", alignItems: "center", height: 52, paddingHorizontal: 16, gap: 12 },
   iconBtn: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: c.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   titleWrap: { flex: 1 },
