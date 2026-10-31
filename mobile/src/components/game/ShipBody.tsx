@@ -34,9 +34,11 @@ export function ShipBody({ color, symbol, direction, length, breadth, capacity }
   const cockpitAcross = breadth * 0.56;
   const enginesAcross = breadth * 0.7;
   const big = capacity >= 6;
+  const boss = capacity >= 12; // 3x3 sector boss mothership: armour ring, skull crest, quad engines
   return (
-    <View style={[styles.hull, { width: w, height: h, backgroundColor: colors[color], flexDirection: FLEX[direction], borderRadius: breadth * 0.36 }]}>
+    <View style={[styles.hull, boss && styles.bossHull, { width: w, height: h, backgroundColor: colors[color], flexDirection: FLEX[direction], borderRadius: breadth * (boss ? 0.28 : 0.36) }]}>
       <View style={[styles.hullShine, { borderRadius: breadth * 0.36 }]} />
+      {boss && <View pointerEvents="none" style={[styles.armour, { borderRadius: breadth * 0.22, margin: breadth * 0.06 }]} />}
       <View
         style={[
           styles.cockpit,
@@ -47,13 +49,14 @@ export function ShipBody({ color, symbol, direction, length, breadth, capacity }
         <View style={styles.cockpitGlint} />
       </View>
       <View style={[styles.center, { flexDirection: vertical ? "column" : "row" }]}>
+        {boss && <Ionicons name="skull" size={icon * 0.8} color={colors.shipDetail} />}
         <Ionicons name="arrow-up" size={icon} color={colors.shipDetail} style={{ transform: [{ rotate: DIR_DEG[direction] }] }} />
         <View style={styles.symbolBadge}>
           <Ionicons name={SYMBOL_ICON[symbol]} size={icon * 0.55} color={colors[color]} />
         </View>
       </View>
       <View style={[styles.engines, { flexDirection: vertical ? "row" : "column", gap: breadth * 0.12 }, vertical ? { width: enginesAcross } : { height: enginesAcross }]}>
-        {(big ? [0, 1, 2] : [0, 1]).map((i) => (
+        {(boss ? [0, 1, 2, 3] : big ? [0, 1, 2] : [0, 1]).map((i) => (
           <View key={i} style={[styles.nozzle, vertical ? { width: breadth * 0.16, height: breadth * 0.14 } : { width: breadth * 0.14, height: breadth * 0.16 }]} />
         ))}
       </View>
@@ -78,6 +81,8 @@ const useStyles = makeStyles((c) => ({
     backgroundColor: c.shipDetail,
     opacity: 0.18,
   },
+  bossHull: { borderWidth: 3, borderColor: c.shipDetail + "99" },
+  armour: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderWidth: 2, borderStyle: "dashed", borderColor: c.shadow + "55" },
   cockpit: { backgroundColor: c.surface, opacity: 0.85, overflow: "hidden" },
   cockpitGlint: { position: "absolute", top: 2, left: 2, width: "35%", height: "35%", borderRadius: 99, backgroundColor: c.brandPrimary, opacity: 0.7 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 2 },

@@ -43,14 +43,14 @@ function DockedShip({ ship, h, leaving, compact }: { ship: Ship; h: number; leav
     transform: [{ scale: 0.5 + 0.5 * enter.value + (leaving ? fly.value * 0.15 : 0) }, { translateY: -fly.value * h * 1.8 }],
   }));
   const len = compact ? h * 0.5 : h * 0.78;
-  const breadth = len * (ship.capacity === 8 ? 0.7 : 0.52);
+  const breadth = len * (ship.capacity === 12 ? 0.95 : ship.capacity === 8 ? 0.7 : 0.52);
   return (
     <Animated.View style={[compact ? styles.dockedCompact : styles.docked, anim]}>
       <View>
         {leaving && <Trail trail={trail} direction="NORTH" width={breadth} height={len} progress={fly} />}
         <ShipBody color={ship.color} symbol={ship.symbol} direction="NORTH" capacity={ship.capacity} length={len} breadth={breadth} />
       </View>
-      <Seats ship={ship} size={compact ? 8 : Math.min(12, h * 0.16)} compact={compact} />
+      <Seats ship={ship} size={compact ? (ship.capacity === 12 ? 7 : 8) : Math.min(12, h * 0.16)} compact={compact} />
     </Animated.View>
   );
 }
@@ -64,17 +64,16 @@ function BayPad({ index, state, h, compact }: { index: number; state: GameState;
 
   useEffect(() => {
     const p = prev.current;
-    if (p && !ship) {
-      const now = state.ships.find((s) => s.id === p.id);
-      if (now?.status === "DEPARTED") {
-        setGhost({ ...p, boarded: p.capacity });
-        const t = setTimeout(() => setGhost(null), 650);
-        prev.current = ship;
-        return () => clearTimeout(t);
-      }
-    }
     prev.current = ship;
+    if (p && !ship && state.ships.find((s) => s.id === p.id)?.status === "DEPARTED") setGhost({ ...p, boarded: p.capacity });
+    if (!ship && !p) setGhost(null); // restart/undo: clear any leftover fly-away ghost
   }, [ship, state.ships]);
+  // own effect so board updates during the fly-away don't cancel the clear-up timer
+  useEffect(() => {
+    if (!ghost) return;
+    const t = setTimeout(() => setGhost(null), 650);
+    return () => clearTimeout(t);
+  }, [ghost]);
 
   const reserved = ship?.status === "DISPATCHING";
   const shown = ship && !reserved ? ship : null;

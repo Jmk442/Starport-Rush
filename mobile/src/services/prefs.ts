@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 
 import { type HatId, randomHandle, type TrailId } from "@/src/game/cosmetics";
+import { BOSS_LEVELS } from "@/src/game/levels_bosses";
 import { storage } from "@/src/utils/storage";
 
 export const DIAG_KEYS = ["starts", "wins", "deadlocks", "undos", "restarts", "hints", "blockedTaps"] as const;
@@ -22,6 +23,8 @@ export interface Prefs {
 }
 
 const MAX_LEVEL_STORED = 30;
+const BOSS_IDS = BOSS_LEVELS.map((b) => b.levelId); // Sector Boss stages
+const STAR_IDS = [...Array.from({ length: MAX_LEVEL_STORED }, (_, i) => i + 1), ...BOSS_IDS];
 let prefs: Prefs = {
   loaded: false,
   music: true,
@@ -64,7 +67,7 @@ export async function loadPrefs() {
     storage.getItem("sr_haptics", true),
   ]);
   const stars: Record<number, number> = {};
-  for (let i = 1; i <= MAX_LEVEL_STORED; i++) {
+  for (const i of STAR_IDS) {
     const v = await storage.getItem(`sr_stars_${i}`, 0);
     if (v) stars[i] = v;
   }
@@ -103,7 +106,7 @@ export function bumpDiag(key: DiagKey) {
 }
 
 export async function resetProgress() {
-  for (let i = 1; i <= MAX_LEVEL_STORED; i++) await storage.removeItem(`sr_stars_${i}`);
+  for (const i of STAR_IDS) await storage.removeItem(`sr_stars_${i}`);
   for (const k of DIAG_KEYS) await storage.removeItem(`sr_diag_${k}`);
   await storage.removeItem("sr_hat");
   await storage.removeItem("sr_trail");

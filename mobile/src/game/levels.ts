@@ -1,4 +1,5 @@
 import { EXTRA_LEVELS } from "./levels_extra";
+import { BOSS_LEVELS } from "./levels_bosses";
 import { SECTOR_LEVELS } from "./levels_sectors";
 import type { LevelDef } from "./types";
 
@@ -593,6 +594,19 @@ export const LEVEL_5: LevelDef = {
 export const LEVELS: LevelDef[] = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, ...EXTRA_LEVELS, ...SECTOR_LEVELS];
 export const TOTAL_PLANNED_LEVELS = LEVELS.length;
 
+export { BOSS_LEVELS };
+
+/** Boss stage that follows campaign level `id` (boss id = 100 + last level of its sector). */
+export const bossAfter = (id: number) => BOSS_LEVELS.find((b) => b.levelId === 100 + id);
+
+/** Play order: 1..20, boss 120, 21..25, boss 125, 26..30, boss 130. Bosses never gate the next sector. */
+export const PLAY_ORDER: number[] = LEVELS.flatMap((l) => [l.levelId, ...(bossAfter(l.levelId) ? [100 + l.levelId] : [])]);
+
+export function nextLevelId(id: number): number | null {
+  const i = PLAY_ORDER.indexOf(id);
+  return i >= 0 && i < PLAY_ORDER.length - 1 ? PLAY_ORDER[i + 1] : null;
+}
+
 export function getLevel(id: number): LevelDef | undefined {
-  return LEVELS.find((l) => l.levelId === id);
+  return LEVELS.find((l) => l.levelId === id) ?? BOSS_LEVELS.find((l) => l.levelId === id);
 }

@@ -1,0 +1,27 @@
+{
+  "summary": "Round 5 mobile-only retest of the result overlay after the useGameSession refactor, on web preview at 390x844 and 375x667. Level 3 jam at normal pace (purple-02, pink-01, yellow-01, purple-01): 'Terminal Jammed' appears with the full-bay message (Orange) and both the Undo and Restart buttons. Restart sets moves to 0 and all 3 bays to Open. Fast taps 70ms apart, with extra taps on cyan-01 and orange-01, still show the overlay about 1s after the board settles, and it stays visible. Spamming taps on the remaining ships while the jam animates and during the hold does not stop the overlay (14 extra taps, overlay at about 1.4s). Undo sets moves to 3, hides the overlay, and the game continues. The alternate jam path (purple-02, pink-01, yellow-01, orange-01, cyan-01) jams at normal pace (Purple message) and with fast taps. Victory regressions pass: L1 'Launch Complete!'; L3 solution victory; Replay sets moves to 0, then a fast-tap win shows victory again; Undo from a jam then winning shows victory. Boss 120: intro 'Magma Leviathan', Engage dismisses it, the 'BOSS DEFEATED' banner appears before the victory 'Magma Leviathan Defeated!', and the boss badge shows. Replay then a fast win shows the burst and victory again. Daily 2026-10-31: the fast purple-01/green-01 jam does not appear instantly; it appears after the board settles (about 1s). Restart gives moves 0 and 3 bays Open. The daily was never won. The replay kicker 'COMBO ×7 REPLAY · BOSS MAGMA LEVIATHAN' now wraps to 2 lines with no truncation (scrollWidth equals clientWidth at 302). sr_stars_120=3 persists across a reload and the home screen shows 3★. No page errors. New LOW issue: the Replay screen overflows horizontally while ships depart.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Replay (/replay?code=SR1.120..., 390 wide, web)", "issues": ["LOW: while ships fly out to the right, document scrollWidth grows to 498-506px at a 390px viewport, and window.scrollX can reach 108px, so the page pans sideways. The game screen stays at 390. RCA: in replay.tsx, styles.root is { flex: 1, backgroundColor } without overflow: 'hidden'. game.tsx root has overflow: 'hidden'. Fix: add overflow: 'hidden' to the replay root."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [".screenshots/l3_jam.png", ".screenshots/l3_alt.png", ".screenshots/l3_win.png", ".screenshots/boss120_win.png", ".screenshots/home_reload.png", ".screenshots/replay120.png"],
+  "action_items": [
+    "LOW: add overflow: 'hidden' to styles.root in /app/mobile/app/replay.tsx. Departing ships currently widen the page to about 498px at 390px wide."
+  ],
+  "critical_code_review_comments": [
+    "useGameSession: deriving resultReady from [busy, display.status] is sound. Rejected taps change neither value, so the hold timer is never cancelled. A fast-forward UNDO/RESTART that lands in a PLAYING state resets resultReady through resetsResult.",
+    "Edge case, not a bug: if a timeline ends DEADLOCK and the user undoes and replays to the same DEADLOCK while not busy, status goes PLAYING then DEADLOCK across renders, so the effect re-arms correctly."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100% of requested flows pass; 1 new LOW overflow issue on the Replay screen"},
+  "seed_data_creation": "None. Won boss 120 and L1/L3 locally (localStorage). The daily was not won and no score was posted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Testing pitfall: force=True clicks on ship testIDs keep landing after the deadlock overlay appears. At 375x667, orange-01's center sits under deadlock-restart-button, which silently restarts the game. Stop spam taps once deadlock-overlay is visible. Level 3 jams: [purple-02, pink-01, yellow-01, purple-01] and [purple-02, pink-01, yellow-01, orange-01, cyan-01]. Level 3 solution: yellow-01, purple-02, pink-01, orange-01, purple-01, cyan-01. After undoing from the first jam (moves 3), orange-01, purple-01, cyan-01 wins.",
+  "rca_of_issue": "Missing-jam bug (Level 3): could not reproduce on web under normal, fast or spam taps. The overlay always appeared 0.6-1.4s after the board settled. Replay overflow: replay.tsx root has no overflow: 'hidden'."
+}

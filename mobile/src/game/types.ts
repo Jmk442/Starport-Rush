@@ -14,7 +14,13 @@ export interface ShipDef {
   width: number;
   height: number;
   exitDirection: Direction;
-  capacity: 4 | 6 | 8;
+  capacity: 4 | 6 | 8 | 12; // 12 = 3x3 boss mothership
+}
+
+export interface BossInfo {
+  title: string; // e.g. "Magma Leviathan"
+  tagline: string;
+  shipId: string; // the mothership
 }
 
 export interface LevelDef {
@@ -25,6 +31,7 @@ export interface LevelDef {
   ships: ShipDef[];
   passengerGroups: { color: AlienColor; count: number }[];
   expectedSolution: string[];
+  boss?: BossInfo;
 }
 
 export interface Ship extends ShipDef {

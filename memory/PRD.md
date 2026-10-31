@@ -42,7 +42,17 @@ Expo app requirement: /app/memory/product/requirements.md (+ full_spec.md). Prem
 - Combo replays: deterministic SR1 replay code (level + tap list + combo window + handle), shared as a deep link /replay?code=… plus pasteable text. The replay screen re-runs the real engine with the real components. Leaderboard rows with a code get a Watch button.
 - Tests: engine 101/101, daily/replay all pass, backend pytest 25/25; testing agent iterations 4-5 passed after fixes (full-message paste, insert race, daily title, nav stack, replay title, ice glow, atomic better-score write).
 
+## Round 5 (2026-10)
+- Sector Bosses: extra boss stage after Levels 20 / 25 / 30 (ids 120 / 125 / 130, src/game/levels_bosses.ts): Magma Leviathan, Frost Colossus, Neon Overlord. Each has one 12-seat 3x3 mothership in the middle of the yard (red / blue / purple) with a skull crest, armour ring and quad engines, plus 8-9 escort ships and 4 bays.
+- Bosses are solver-verified. Each is harder than its sector's last level but not brutal: the win-path ratio is 0.6-1.0x the last level's (0.0106 vs 0.0132, 0.0064 vs 0.0071, 0.0021 vs 0.0026). Generator: tests/generate_bosses.ts
+- Not gated: clearing 20 unlocks both 21 and the boss; play order 20 → 120 → 21 … 30 → 130 → end. No Starport Prime boss. Daily unchanged.
+- Boss intro banner (WARNING strip, name, tagline, mothership preview, Engage), own boss music loops (music_boss_lava/ice/neon.wav), siren and fanfare SFX, "BOSS DEFEATED!" flash and shard burst, then "<Boss> Defeated!" victory with a badge. Home has wide boss tiles; share card and replay screen show the boss name. Boss stars persist.
+- Jam bugs: no rule bug reproduced. The engine never jams with 2 ships + 2 free bays, and never reaches a stuck state without a jam (exhaustive check: 45 dailies, all levels, all bosses).
+- Jam fixes: taps after an already-decided jam no longer skip the animation (the jam used to pop up instantly). The result overlay is now derived from the settled board, so rejected taps can't hide it. Restart fully resets the daily. Bays show "Open" again after Restart (ghost-timer bug).
+- Tests: engine 112/112, daily/replay all pass (incl. false-jam + missing-jam regressions); testing agent iterations 6-8 passed.
+
 ## Backlog
+- P1: real-iPhone check of boss music/haptics and the jam overlay under device lag
 - P1: on-device check of haptics, pitch-rising audio and the image share card in Expo Go on iPhone; frame-rate profiling
 - P1: Levels 6+ (generator in tests/generate_levels.ts already supports specs)
 - P2: Skia renderer evaluation on native; daily seeded challenge level

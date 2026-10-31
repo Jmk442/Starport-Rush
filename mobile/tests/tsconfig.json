@@ -9,5 +9,5 @@
     "types": [],
     "skipLibCheck": true
   },
-  "include": ["engine.test.ts", "generate_levels.ts", "trace_levels.ts", "audio_session_model.ts", "generate_sectors.ts", "daily.test.ts", "../src/game/generator.ts", "../src/game/daily.ts", "../src/game/replay.ts", "../src/game/engine.ts", "../src/game/solver.ts", "../src/game/levels.ts", "../src/game/types.ts"]
+  "include": ["engine.test.ts", "generate_levels.ts", "trace_levels.ts", "audio_session_model.ts", "generate_sectors.ts", "generate_bosses.ts", "false_jam_repro.ts", "daily.test.ts", "../src/game/generator.ts", "../src/game/daily.ts", "../src/game/replay.ts", "../src/game/engine.ts", "../src/game/solver.ts", "../src/game/levels.ts", "../src/game/types.ts"]
 }

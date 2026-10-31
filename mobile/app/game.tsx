@@ -10,6 +10,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AlienFace } from "@/src/components/game/AlienFace";
 import { AlienQueue } from "@/src/components/game/AlienQueue";
+import { BossBurst } from "@/src/components/game/BossBurst";
+import { BossIntro } from "@/src/components/game/BossIntro";
 import { ComboPopup } from "@/src/components/game/ComboPopup";
 import { ControlBar } from "@/src/components/game/ControlBar";
 import { ShareCardModal, type ShareData } from "@/src/components/game/ShareCard";
@@ -20,9 +22,9 @@ import { SettingsSheet } from "@/src/components/SettingsSheet";
 import { Starfield } from "@/src/components/Starfield";
 import { newlyUnlocked, totalStars } from "@/src/game/cosmetics";
 import { dailyLevel, dailyScore } from "@/src/game/daily";
-import { getLevel, LEVEL_1, LEVELS } from "@/src/game/levels";
+import { getLevel, LEVEL_1, nextLevelId } from "@/src/game/levels";
 import { encodeReplay } from "@/src/game/replay";
-import { DAILY_SECTOR, sectorFor } from "@/src/game/sectors";
+import { DAILY_SECTOR, musicFor, sectorFor } from "@/src/game/sectors";
 import type { LevelDef } from "@/src/game/types";
 import { starsFor, useGameSession } from "@/src/game/useGameSession";
 import { COLOR_LABEL } from "@/src/game/visuals";
@@ -57,12 +59,17 @@ function GameBody({ level, daily }: { level: LevelDef; daily?: string }) {
   const [dailyInfo, setDailyInfo] = useState<{ score: number; best: boolean; sync: string } | null>(null);
   const prefs = usePrefs();
   const sector = daily ? DAILY_SECTOR : sectorFor(level.levelId);
-  useEffect(() => setMusicTrack(sector.music), [sector.music]);
-  const isLast = !daily && level.levelId >= LEVELS[LEVELS.length - 1].levelId;
+  const track = daily ? sector.music : musicFor(level.levelId);
+  useEffect(() => setMusicTrack(track), [track]);
+  const boss = daily ? undefined : level.boss;
+  const nextId = daily ? null : nextLevelId(level.levelId);
+  const isLast = !daily && nextId === null;
+  const nextBoss = nextId !== null && nextId >= 100;
+  const [intro, setIntro] = useState(!!boss);
   const goNext = () => {
     if (daily) router.dismissTo("/daily");
     else if (isLast) router.dismissTo({ pathname: "/", params: { stage: "complete" } });
-    else router.setParams({ level: String(level.levelId + 1) });
+    else router.setParams({ level: String(nextId) });
   };
   const baysFull = display.bays.every((b) => b !== null);
 
@@ -107,6 +114,14 @@ function GameBody({ level, daily }: { level: LevelDef; daily?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [display.status, stars, level.levelId, daily]);
   const won = display.status === "WON";
+  // Boss stages hold the board a little longer for the big victory moment.
+  const [bossHoldDone, setBossHoldDone] = useState(false);
+  useEffect(() => {
+    if (!boss || !session.resultReady) return setBossHoldDone(false);
+    const t = setTimeout(() => setBossHoldDone(true), 1300);
+    return () => clearTimeout(t);
+  }, [boss, session.resultReady]);
+  const showVictory = won && session.resultReady && (!boss || bossHoldDone);
 
   // Portrait split: 30% queue, 15% docks, 45% yard, 10% controls (safe-area aware).
   const avail = height - insets.top - insets.bottom;
@@ -130,7 +145,7 @@ function GameBody({ level, daily }: { level: LevelDef; daily?: string }) {
             </Pressable>
             <View style={styles.titleWrap}>
               <Text style={[styles.levelNum, { color: colors[sector.accent] }]} numberOfLines={1} testID="game-sector-name">
-                {daily ? `DAILY · ${daily}` : `${sector.name.toUpperCase()} · LEVEL ${level.levelId}`}
+                {daily ? `DAILY · ${daily}` : `${sector.name.toUpperCase()} · ${boss ? "SECTOR BOSS" : `LEVEL ${level.levelId}`}`}
               </Text>
               <Text style={styles.levelName} testID="game-level-name" numberOfLines={1}>
                 {level.name}
@@ -158,7 +173,7 @@ function GameBody({ level, daily }: { level: LevelDef; daily?: string }) {
             onTap={(id) => session.dispatch({ type: "TAP_SHIP", shipId: id })}
           />
           <ComboPopup combo={session.combo} />
-          {won && !session.resultReady && (
+          {won && !session.resultReady && !boss && (
             <Animated.View entering={ZoomIn.springify().damping(9)} pointerEvents="none" style={styles.clearBanner} testID="sector-clear-banner">
               <Text style={styles.clearText}>SECTOR CLEAR!</Text>
             </Animated.View>
@@ -175,23 +190,24 @@ function GameBody({ level, daily }: { level: LevelDef; daily?: string }) {
         />
       </View>
 
-      {won && session.resultReady && (
+      {won && boss && !showVictory && <BossBurst accent={colors[sector.accent]} />}
+      {showVictory && (
         <ResultOverlay
           kind="victory"
-          title={daily ? "Daily Cleared!" : isLast ? "Starport Legend!" : "Launch Complete!"}
+          title={daily ? "Daily Cleared!" : boss ? `${boss.title} Defeated!` : isLast ? "Starport Legend!" : "Launch Complete!"}
           message={`Cleared in ${display.moves} moves${display.undos ? ` with ${display.undos} undo${display.undos > 1 ? "s" : ""}` : ""}${session.bestCombo >= 2 ? ` · best combo ×${session.bestCombo}` : ""}.`}
           stars={stars}
           actions={[
             daily
               ? { id: "leaderboard", label: "View Leaderboard", primary: true, onPress: goNext }
-              : { id: "next", label: isLast ? "All Sectors Cleared" : `Next Level (${level.levelId + 1})`, primary: true, onPress: goNext },
+              : { id: "next", label: isLast ? "All Sectors Cleared" : nextBoss ? "Face the Sector Boss" : `Next Level (${nextId})`, primary: true, onPress: goNext },
             {
               id: "share",
               label: "Share Score",
               onPress: () =>
                 setShareData({
                   levelId: level.levelId,
-                  levelName: daily ? `Daily ${daily}` : level.name,
+                  levelName: daily ? `Daily ${daily}` : boss ? `Boss · ${boss.title}` : level.name,
                   moves: display.moves,
                   stars,
                   bestCombo: session.bestCombo,
@@ -205,6 +221,14 @@ function GameBody({ level, daily }: { level: LevelDef; daily?: string }) {
             ...(daily ? [] : [{ id: "replay", label: "Replay", onPress: () => session.dispatch({ type: "RESTART" }) }]),
           ]}
         >
+          {boss && (
+            <View style={[styles.bossBadge, { borderColor: colors[sector.accent] }]} testID="victory-boss-badge">
+              <Ionicons name="trophy" size={18} color={colors.yellow} />
+              <Text style={styles.bossBadgeText} numberOfLines={2}>
+                {sector.name} boss defeated · 12-seat mothership launched
+              </Text>
+            </View>
+          )}
           {dailyInfo && (
             <View style={styles.dailyBox} testID="victory-daily-score">
               <Text style={styles.dailyScore}>{dailyInfo.score} pts</Text>
@@ -253,6 +277,7 @@ function GameBody({ level, daily }: { level: LevelDef; daily?: string }) {
           ]}
         />
       )}
+      {intro && boss && <BossIntro level={level} accent={colors[sector.accent]} sectorName={sector.name} onStart={() => setIntro(false)} />}
       <SettingsSheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
       {toast && (
         <Pressable testID="game-toast" onPress={() => setToast(null)} style={[styles.toast, { bottom: insets.bottom + 24 }]}>
@@ -264,9 +289,11 @@ function GameBody({ level, daily }: { level: LevelDef; daily?: string }) {
 }
 
 const useStyles = makeStyles((c) => ({
-  root: { flex: 1, backgroundColor: c.surface },
+  root: { flex: 1, backgroundColor: c.surface, overflow: "hidden" },
   sky: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
   dailyBox: { alignItems: "center", marginTop: 12 },
+  bossBadge: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12, borderWidth: 1.5, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8, alignSelf: "stretch", backgroundColor: c.surfaceTertiary },
+  bossBadgeText: { flex: 1, fontFamily: fonts.display, fontSize: 13, color: c.onSurface },
   dailyScore: { fontFamily: fonts.display, fontSize: 28, color: c.yellow },
   dailySync: { fontFamily: fonts.text, fontSize: 12, color: c.onSurfaceSecondary, textAlign: "center", marginTop: 2 },
   toast: { position: "absolute", left: 24, right: 24, backgroundColor: c.surfaceInverse, borderRadius: radius.md, padding: 12, alignItems: "center" },

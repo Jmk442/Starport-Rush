@@ -28,6 +28,8 @@ const SOURCES = {
   grumble: require("../../assets/sounds/grumble.wav"),
   cheer: require("../../assets/sounds/cheer.wav"),
   combo: require("../../assets/sounds/combo.wav"),
+  boss_alarm: require("../../assets/sounds/boss_alarm.wav"),
+  boss_win: require("../../assets/sounds/boss_win.wav"),
   board_1: require("../../assets/sounds/board_1.wav"),
   board_2: require("../../assets/sounds/board_2.wav"),
   board_3: require("../../assets/sounds/board_3.wav"),
@@ -72,6 +74,9 @@ const TRACKS: Record<MusicTrack, number> = {
   lava: require("../../assets/sounds/music_lava.wav"),
   ice: require("../../assets/sounds/music_ice.wav"),
   neon: require("../../assets/sounds/music_neon.wav"),
+  boss_lava: require("../../assets/sounds/music_boss_lava.wav"),
+  boss_ice: require("../../assets/sounds/music_boss_ice.wav"),
+  boss_neon: require("../../assets/sounds/music_boss_neon.wav"),
 };
 const musicPlayers: Partial<Record<MusicTrack, AudioPlayer>> = {};
 let track: MusicTrack = "default";

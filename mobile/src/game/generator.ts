@@ -24,7 +24,7 @@ export interface GenSpec {
   name: string;
   size: number;
   bays: number;
-  ships: { color: AlienColor; cap: 4 | 6 | 8 }[];
+  ships: { color: AlienColor; cap: 4 | 6 | 8 | 12 }[];
   minWinRatio: number;
   maxWinRatio: number;
 }
@@ -43,15 +43,16 @@ export function place(spec: GenSpec, r: () => number): ShipDef[] | null {
   const out: ShipDef[] = [];
   const counter: Record<string, number> = {};
   for (const s of spec.ships) {
-    const [breadth, length] = s.cap === 4 ? [1, 2] : s.cap === 6 ? [1, 3] : [2, 3];
+    const [breadth, length] = s.cap === 4 ? [1, 2] : s.cap === 6 ? [1, 3] : s.cap === 8 ? [2, 3] : [3, 3];
+    const boss = s.cap === 12; // mothership sits in the middle of the yard
     let ok = false;
     for (let t = 0; t < 300 && !ok; t++) {
       const dir = DIRS[Math.floor(r() * 4)];
       const vertical = dir === "NORTH" || dir === "SOUTH";
       const w = vertical ? breadth : length;
       const h = vertical ? length : breadth;
-      const x = Math.floor(r() * (spec.size - w + 1));
-      const y = Math.floor(r() * (spec.size - h + 1));
+      const x = boss ? 1 + Math.floor(r() * (spec.size - 4)) : Math.floor(r() * (spec.size - w + 1));
+      const y = boss ? 1 + Math.floor(r() * (spec.size - 4)) : Math.floor(r() * (spec.size - h + 1));
       const cells: string[] = [];
       for (let dx = 0; dx < w; dx++) for (let dy = 0; dy < h; dy++) cells.push(`${x + dx},${y + dy}`);
       if (cells.some((c) => occ.has(c))) continue;

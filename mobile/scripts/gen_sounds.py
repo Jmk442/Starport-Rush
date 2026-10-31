@@ -106,4 +106,20 @@ loop("music_ice.wav", 90, [(146.8, [587.3, 740, 880, 1174.7]), (123.5, [493.9, 6
 # Neon Bazaar: 128bpm synthwave arps with a clap on 2 & 4
 loop("music_neon.wav", 128, [(130.8, [523.3, 659.3, 784]), (116.5, [466.2, 587.3, 698.5]), (103.8, [415.3, 523.3, 622.3]), (98.0, [392, 493.9, 587.3])],
      saw, tri, lambda t, b: random.uniform(-1, 1) * math.exp(-((t + b) % (2 * b)) * 30) * 0.09, 13)
+
+# Sector Boss loops (Round 5): faster, heavier versions of each sector's palette.
+kick = lambda t, b: math.sin(2 * math.pi * (110 - 70 * (t % b) / b) * t) * math.exp(-(t % b) * 18) * 0.32
+# Lava boss: 140bpm stomping minor riff, square lead, double kick
+loop("music_boss_lava.wav", 140, [(82.4, [164.8, 196, 246.9, 329.6]), (77.8, [155.6, 196, 233.1, 311.1]), (73.4, [146.8, 174.6, 220, 293.7]), (87.3, [174.6, 207.7, 261.6, 349.2])],
+     sq, saw, lambda t, b: kick(t, b / 2), 21)
+# Ice boss: 120bpm cold bells over a pulsing sub, sharp hats
+loop("music_boss_ice.wav", 120, [(110.0, [440, 523.3, 659.3, 880]), (103.8, [415.3, 493.9, 622.3, 830.6]), (98.0, [392, 466.2, 587.3, 784]), (92.5, [370, 440, 554.4, 740])],
+     bell, sq, lambda t, b: kick(t, b) + random.uniform(-1, 1) * math.exp(-((t + b / 4) % (b / 2)) * 90) * 0.05, 22)
+# Neon boss: 150bpm frantic saw arps + four-on-the-floor + claps
+loop("music_boss_neon.wav", 150, [(98.0, [392, 493.9, 587.3, 784]), (110.0, [440, 523.3, 659.3, 880]), (87.3, [349.2, 440, 523.3, 698.5]), (103.8, [415.3, 523.3, 622.3, 830.6])],
+     saw, sq, lambda t, b: kick(t, b) + random.uniform(-1, 1) * math.exp(-((t + b) % (2 * b)) * 30) * 0.08, 23)
+# Boss intro siren (two-tone sweep) and boss-defeated fanfare
+write("boss_alarm.wav", seq(*[tone(lambda t, up=up: (520 + 380 * t / 0.3) if up else (900 - 380 * t / 0.3), 0.3, 0.38, sq) for up in (1, 0, 1, 0)]))
+write("boss_win.wav", mix(seq(*[tone(lambda t, f=f: f, d, 0.36, tri) for f, d in ((392, 0.12), (523.3, 0.12), (659.3, 0.12), (784, 0.12), (659.3, 0.1), (784, 0.1), (1046.5, 0.6))]),
+                         seq([0.0] * int(SR * 0.48), tone(lambda t: 130.8, 0.9, 0.3, tri))))
 print("ok")

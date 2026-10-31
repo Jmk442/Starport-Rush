@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { createInitialState, step } from "@/src/game/engine";
 import { hint as solverHint } from "@/src/game/solver";
-import { DURATION_TABLE, RESULT_HOLD_MS } from "@/src/game/timing";
+import { busyActionPolicy, DURATION_TABLE, RESULT_HOLD_MS, resetsResult } from "@/src/game/timing";
 import type { GameAction, GameEvent, GameState, LevelDef, ReplayRecord } from "@/src/game/types";
 import { feedbackFor } from "@/src/services/audio";
 import { bumpDiag } from "@/src/services/prefs";
@@ -72,7 +72,6 @@ export function useGameSession(level: LevelDef) {
     }
     if (ev.type === "BOARD" && ev.seat === 1) react("cheer");
     if (!quiet) feedbackFor(ev, c);
-    if (ev.type === "WIN" || ev.type === "DEADLOCK") timers.current.push(setTimeout(() => setResultReady(true), quiet ? 0 : RESULT_HOLD_MS[ev.type]));
     if (ev.type === "WIN") {
       bumpDiag("wins");
       react("party");
@@ -88,15 +87,27 @@ export function useGameSession(level: LevelDef) {
     return clearTimers;
   }, []);
 
+  // Result overlay is derived from the settled board, not from per-event timers that a
+  // fast-forward or a rejected tap could cancel: once the shown board is WON/DEADLOCK and no
+  // timeline is running, the overlay always follows after the hold.
+  useEffect(() => {
+    if (busy || display.status === "PLAYING") return;
+    const t = setTimeout(() => setResultReady(true), RESULT_HOLD_MS[display.status === "WON" ? "WIN" : "DEADLOCK"]);
+    return () => clearTimeout(t);
+  }, [busy, display.status]);
+
   const dispatch = useCallback(
     (action: GameAction) => {
-      if (busyRef.current) {
+      const policy = busyActionPolicy(core.current.state.status, busyRef.current, action.type);
+      if (policy === "ignore") return; // game already decided: let the board settle first
+      if (policy === "fast-forward") {
         // fast-forward: land on the final state of the running timeline and
         // still apply skipped steps' combo/diagnostics (sounds only for departures)
         clearTimers();
         const skipped = pending.current;
         pending.current = [];
         skipped.forEach((ev) => handleEvent(ev, ev.type !== "DEPART"));
+        clearTimers(); // drop timers of the skipped timeline (undo/restart follows)
         setDisplay(core.current.state);
         busyRef.current = false;
         setBusy(false);
@@ -106,7 +117,7 @@ export function useGameSession(level: LevelDef) {
       setCanUndo(out.history.length > 0);
       setLog((l) => [...l, out.record]);
       setHintId(null);
-      setResultReady(false);
+      if (resetsResult(out.result)) setResultReady(false);
       if (out.result === "UNDONE" || out.result === "RESTARTED") {
         comboRef.current = { count: 0, last: 0, start: 0 };
         if (bestRef.current.to > out.state.moves) {

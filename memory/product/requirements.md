@@ -58,3 +58,7 @@ User's words:
 "iPhone Fixes: Fix any feel or layout problems you find while playing the new levels on your phone"
 "Combo Replays: Let players share a short replay of their best combo"
 Decisions: user chose both "Keep it offline: daily puzzle with a shareable score card only" and "Add a simple online leaderboard". Combined: the daily puzzle is playable offline and has a shareable score card; scores are also posted to a simple online leaderboard of player handles when online (no login, handle only; this is the one approved exception to the no-backend rule). Replay format: builder's choice. iPhone fixes: no specifics given, so do a general layout and feel check on the new levels.
+
+## Round 5
+User's words: "Sector Bosses: Add a giant boss-ship puzzle at the end of each sector"
+(Context: sectors are Lava Moon 16-20, Ice Nebula 21-25, Neon Bazaar 26-30; boss levels are solver-proven winnable and fit each sector's theme.)

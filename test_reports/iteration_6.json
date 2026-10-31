@@ -1,0 +1,36 @@
+{
+  "summary": "Round 5 (Sector Bosses + false-jam fix): mobile-only testing in the web preview at 390x844 and 375x667. Node suites pass: engine 112/112, daily all pass. In the UI: boss tiles 120/125/130 exist with the right names and lock text, and there is none for Starport Prime. Nothing is gated: L21 and L26 open with only 20/25 cleared. All three bosses show the intro, Engage dismisses it, the header reads '<SECTOR> · SECTOR BOSS', and the 3x3 mothership has a skull crest. All three solved with the documented solutions. Each showed BOSS DEFEATED!, '<Boss> Defeated!', the boss badge, and next buttons 'Next Level (21)' / 'Next Level (26)' / 'All Sectors Cleared', which goes to /?stage=complete with the notice. L20 victory shows 'Face the Sector Boss' and goes to /game?level=120. The 12-seat dots (12 children) fit inside the bay at both sizes. The Share Score card shows 'BOSS · MAGMA LEVIATHAN'. The Share Combo replay code SR1.120… opens /replay with the kicker 'COMBO ×7 REPLAY · BOSS MAGMA LEVIATHAN' and plays to Watch again. Daily 2026-10-31 false jam: (a) green-01 then purple-01 50ms apart gives VICTORY. (b) purple-01 then green-01 50ms apart gives a genuine jam, and the overlay appears 1.06-1.28s after the 2nd tap, not instantly. Deadlock Restart sets moves to 0, Undo is disabled, there is no overlay and the ships are back in the yard, BUT the bays are blank instead of 'Open' (stale invisible ghost ships, a pre-existing bug). New bug found: boss stars are not loaded from storage after an app reload.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "prefs.loadPrefs / resetProgress (src/services/prefs.ts)", "issue": "MAX_LEVEL_STORED = 30, so the sr_stars_120/125/130 keys are never read on startup or removed on reset. Repro: set sr_stars_120=2 (or beat boss 120, which writes sr_stars_120=3) and reload. boss-tile-120 then shows 0 stars, the total star count drops (4★ instead of 6★), and hats unlocked by boss stars (e.g. Party Cone) become locked again after the reload. 'Reset progress' also leaves the boss stars in storage. Fix: loop over PLAY_ORDER / all level ids including BOSS_LEVELS instead of 1..30.", "testID": "boss-tile-120-stars", "priority": "HIGH"},
+      {"component": "DockBays BayPad ghost (pre-existing)", "issue": "After Restart (deadlock-restart-button or the control-bar restart) the bays render blank instead of 'Open'. Their innerText still contains ship icon glyphs, which means stale invisible ghost DockedShips. RCA: the ghost effect depends on [ship, state.ships], and its cleanup clearTimeout(t) runs on the next snapshot (within 650ms), so setGhost(null) never fires. The ghost is hidden while another ship occupies the bay, then reappears (opacity 0) once the bay is empty, e.g. after a restart. Fix: clear the ghost in a separate effect keyed on the ghost, or don't cancel the timer when state.ships changes.", "testID": "dock-bay-1..3", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Replay (390 wide)", "issues": ["Kicker 'COMBO ×7 REPLAY · BOSS MAGMA LEVIATHAN' is truncated ('…LEVIATH…'). Consider 2 lines or a shorter 'BOSS · MAGMA LEVIATHAN'."]},
+      {"screen": "Home completion notice", "issues": ["Says 'All 30 sectors cleared!' (uses LEVELS.length), but there are 4 sectors / 30 levels + 3 bosses. Fix the copy."]},
+      {"screen": "Game (web only, pre-existing)", "issues": ["After ships depart, document scrollWidth grows to ~545-584px at 375 wide and the page can scroll horizontally (seen on L1 and on bosses). Off-screen fly-out ships are not clipped. Add overflow hidden on the yard/root. Probably not visible on native."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/tmp/starport-tests/tests/engine.test.js", "/tmp/starport-tests/tests/daily.test.js"],
+  "action_items": [
+    "HIGH: prefs.ts loadPrefs/resetProgress must include boss ids 120/125/130 (iterate all LEVELS + BOSS_LEVELS ids), otherwise boss stars and the star-unlocked cosmetics are lost on reload",
+    "MEDIUM: fix the DockBays ghost timer being cancelled by the effect cleanup, so empty bays show 'Open' after Restart/Undo",
+    "LOW: completion notice copy 'All 30 sectors cleared!'",
+    "LOW: replay kicker truncation for boss names; web horizontal overflow from departing ships"
+  ],
+  "critical_code_review_comments": [
+    "busyActionPolicy: ignoring TAP_SHIP when core status is WON/DEADLOCK while busy is correct. UNDO/RESTART still fast-forward and clear the result timers. Verified in the UI.",
+    "Boss levels can be opened directly via URL even when locked. That's acceptable, but unlock is only checked on home.",
+    "game.tsx bossHoldDone effect returns setBossHoldDone(false) from useEffect (it returns undefined, so it works, but it's an odd pattern)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "~90% (2 bugs: boss-star persistence, blank bays after restart)"},
+  "seed_data_creation": "Daily 2026-10-31 was won once in the UI (scenario a), so one daily score was posted under a random browser device id. Earlier runs had also posted scores for the same date.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "AsyncStorage web is localStorage (v2.2), so you can set progress with localStorage.setItem('sr_stars_20','3') and reload. Solutions: L20 yellow-01,pink-01,purple-01,cyan-02,orange-01,cyan-01,green-01,yellow-02,pink-02; L25 blue-01,yellow-01,purple-01,orange-01,cyan-01,pink-01,orange-02,purple-02,blue-02,green-01; L30 pink-02,cyan-02,cyan-01,blue-02,blue-01,green-01,purple-01,pink-01,orange-01,yellow-01,yellow-02. On web, stub navigator.share = async d => window.__shared = d to capture the replay message. The daily has 3 bays (dock-bay-1..3).",
+  "rca_of_issue": "False jam: fixed and verified in the UI (fast taps → win; genuine jam → overlay after the board settles, ~1.1-1.3s). New boss-star persistence bug: prefs.ts MAX_LEVEL_STORED=30 excludes 120/125/130. Blank bays after restart: DockBays ghost timer cancelled by the effect cleanup on the next snapshot."
+}

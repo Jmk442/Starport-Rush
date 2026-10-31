@@ -1,7 +1,7 @@
 // Automated engine tests. Run:
 //   npx tsc -p tests/tsconfig.json && node /tmp/starport-tests/tests/engine.test.js
 import { applyTap, checkInvariants, createInitialState, findBlocker, legalMoves, step } from "../src/game/engine";
-import { LEVEL_1, LEVELS } from "../src/game/levels";
+import { BOSS_LEVELS, LEVEL_1, LEVELS, nextLevelId, PLAY_ORDER } from "../src/game/levels";
 import { canonicalKey, countPaths, hint, solve } from "../src/game/solver";
 import type { GameState } from "../src/game/types";
 
@@ -159,7 +159,7 @@ test("exhaustive: every reachable state satisfies invariants", () => {
   ok(seen.size > 3, "explored states");
 });
 
-for (const level of LEVELS) {
+for (const level of [...LEVELS, ...BOSS_LEVELS]) {
   test(`level ${level.levelId}: passengers per colour exactly match ship capacity`, () => {
     const need: Record<string, number> = {};
     const have: Record<string, number> = {};
@@ -207,6 +207,31 @@ test("bigger ships and more bays appear in later levels", () => {
   ok(LEVELS.length === 30, `30 levels (got ${LEVELS.length})`);
   for (let i = 1; i < LEVELS.length; i++)
     if (![16, 21, 26].includes(LEVELS[i].levelId)) ok(LEVELS[i].ships.length >= LEVELS[i - 1].ships.length - 1, "ship count ramps within a pack");
+});
+
+test("sector bosses: one 12-seat 3x3 mothership each, centred, harder than the sector's last level", () => {
+  eq(BOSS_LEVELS.map((b) => b.levelId), [120, 125, 130]);
+  for (const b of BOSS_LEVELS) {
+    const motherships = b.ships.filter((s) => s.capacity === 12);
+    eq(motherships.length, 1, `${b.levelId} motherships`);
+    const m = motherships[0];
+    eq([m.width, m.height], [3, 3], "3x3 hull");
+    eq(b.boss?.shipId, m.id, "boss.shipId");
+    ok(!!b.boss?.title && !!b.boss?.tagline, "boss name + tagline");
+    ok(m.x >= 1 && m.y >= 1 && m.x + 3 <= b.board.width - 1 && m.y + 3 <= b.board.height - 1, "mothership in the middle of the yard");
+    const last = LEVELS.find((l) => l.levelId === b.levelId - 100)!;
+    const rb = countPaths(createInitialState(b)).ratio;
+    const rl = countPaths(createInitialState(last)).ratio;
+    ok(rb < rl, `boss ${b.levelId} ratio ${rb.toFixed(4)} < level ${last.levelId} ${rl.toFixed(4)}`);
+    ok(rb >= rl * 0.6, `boss ${b.levelId} not brutal: ratio ${rb.toFixed(4)} >= 0.6 x ${rl.toFixed(4)}`);
+    ok(b.ships.length >= last.ships.length - 1, "full escort fleet");
+  }
+});
+test("play order: bosses follow 20/25/30 and never gate the next sector", () => {
+  eq(PLAY_ORDER.length, 33);
+  eq([nextLevelId(20), nextLevelId(120), nextLevelId(25), nextLevelId(125), nextLevelId(30), nextLevelId(130)], [120, 21, 125, 26, 130, null]);
+  eq(nextLevelId(19), 20);
+  ok(!PLAY_ORDER.includes(115), "no Starport Prime boss");
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AlienFace } from "@/src/components/game/AlienFace";
 import { SettingsSheet } from "@/src/components/SettingsSheet";
 import { totalStars } from "@/src/game/cosmetics";
-import { LEVELS } from "@/src/game/levels";
+import { getLevel, LEVELS } from "@/src/game/levels";
 import { decodeReplay, findReplayCode } from "@/src/game/replay";
 import { SECTORS } from "@/src/game/sectors";
 import { setMusicTrack } from "@/src/services/audio";
@@ -29,7 +29,7 @@ export default function Home() {
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    if (params.stage === "complete") setNotice(`All ${LEVELS.length} sectors cleared! You're officially a Starport legend.`);
+    if (params.stage === "complete") setNotice(`All ${SECTORS.length} sectors cleared! You're officially a Starport legend.`);
   }, [params.stage]);
 
   const unlocked = (id: number) => LEVELS.some((l) => l.levelId === id) && (id === 1 || (prefs.stars[id - 1] ?? 0) > 0);
@@ -139,6 +139,7 @@ export default function Home() {
                 );
               })}
             </View>
+            {sec.boss && <BossTile id={sec.boss.id} last={sec.last} accent={colors[sec.accent]} cell={colors[sec.cell]} open={(prefs.stars[sec.last] ?? 0) > 0} stars={prefs.stars[sec.boss.id] ?? 0} onPress={play} />}
           </View>
         ))}
 
@@ -179,6 +180,40 @@ export default function Home() {
   );
 }
 
+/** Wide boss stage tile after a sector's grid. Unlocks when the sector's last level is cleared; never gates the next sector. */
+function BossTile({ id, last, accent, cell, open, stars, onPress }: { id: number; last: number; accent: string; cell: string; open: boolean; stars: number; onPress: (id: number) => void }) {
+  const styles = useStyles();
+  const { colors } = useTheme();
+  const boss = getLevel(id)?.boss;
+  if (!boss) return null;
+  return (
+    <Pressable
+      testID={`boss-tile-${id}`}
+      disabled={!open}
+      onPress={() => onPress(id)}
+      style={({ pressed }) => [styles.boss, open ? { borderColor: accent, backgroundColor: cell } : styles.tileLocked, pressed && styles.pressed]}
+    >
+      <View style={[styles.bossIcon, { borderColor: open ? accent : colors.border }]}>
+        <Ionicons name={open ? "skull" : "lock-closed"} size={22} color={open ? accent : colors.muted} />
+      </View>
+      <View style={styles.flex}>
+        <Text style={[styles.bossKicker, { color: open ? accent : colors.muted }]}>SECTOR BOSS</Text>
+        <Text style={[styles.bossTitle, !open && { color: colors.muted }]} numberOfLines={1}>
+          {boss.title}
+        </Text>
+        {!open && <Text style={styles.soon}>Clear Level {last} to face it</Text>}
+      </View>
+      {open && (
+        <View style={styles.tileStars} testID={`boss-tile-${id}-stars`}>
+          {[0, 1, 2].map((s) => (
+            <Ionicons key={s} name={s < stars ? "star" : "star-outline"} size={14} color={s < stars ? colors.yellow : colors.muted} />
+          ))}
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
 const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surface },
   bg: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
@@ -210,6 +245,10 @@ const useStyles = makeStyles((c) => ({
   noticeText: { flex: 1, fontFamily: fonts.text, fontSize: 13, color: c.onSurface },
   section: { fontFamily: fonts.display, fontSize: 16, color: c.onSurface, marginBottom: 12 },
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 8, marginBottom: 24 },
+  boss: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: radius.md, borderWidth: 1.5, padding: 12, minHeight: 64, marginTop: -12, marginBottom: 24 },
+  bossIcon: { width: 40, height: 40, borderRadius: radius.md, borderWidth: 1, backgroundColor: c.surfaceSecondary, alignItems: "center", justifyContent: "center" },
+  bossKicker: { fontFamily: fonts.display, fontSize: 11, letterSpacing: 2 },
+  bossTitle: { fontFamily: fonts.display, fontSize: 16, color: c.onSurface },
   tileWrap: { width: "18%" },
   tile: { aspectRatio: 0.9, borderRadius: radius.md, alignItems: "center", justifyContent: "center", gap: 2, borderWidth: 1 },
   tileOpen: { backgroundColor: c.surfaceSecondary, borderColor: c.brandPrimary },

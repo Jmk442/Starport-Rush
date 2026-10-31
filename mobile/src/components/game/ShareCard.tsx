@@ -28,7 +28,7 @@ const CREW: AlienColor[] = ["cyan", "pink", "yellow", "green", "purple"];
 
 export function shareText(d: ShareData) {
   const stars = "★".repeat(d.stars) + "☆".repeat(3 - d.stars);
-  return `@${d.handle} cleared STARPORT RUSH · ${d.levelId >= 1000 ? d.levelName : `Level ${d.levelId} "${d.levelName}"`}${d.score ? ` · ${d.score} pts` : ""}\nCleared in ${d.moves} moves ${stars}${d.bestCombo >= 2 ? ` · combo ×${d.bestCombo}` : ""} · ${d.seconds}s\nCan you launch faster? 🚀`;
+  return `@${d.handle} cleared STARPORT RUSH · ${d.levelId >= 100 ? d.levelName : `Level ${d.levelId} "${d.levelName}"`}${d.score ? ` · ${d.score} pts` : ""}\nCleared in ${d.moves} moves ${stars}${d.bestCombo >= 2 ? ` · combo ×${d.bestCombo}` : ""} · ${d.seconds}s\nCan you launch faster? 🚀`;
 }
 
 export function ShareCardModal({ data, onClose }: { data: ShareData | null; onClose: () => void }) {
@@ -69,7 +69,7 @@ export function ShareCardModal({ data, onClose }: { data: ShareData | null; onCl
           <View ref={card} collapsable={false} style={styles.card} testID="share-card">
             <Text style={styles.brand}>STARPORT RUSH</Text>
             <Text style={styles.level}>
-              {data.levelId >= 1000 ? data.levelName.toUpperCase() : `LEVEL ${data.levelId} · ${data.levelName.toUpperCase()}`}
+              {data.levelId >= 100 ? data.levelName.toUpperCase() : `LEVEL ${data.levelId} · ${data.levelName.toUpperCase()}`}
             </Text>
             <View style={styles.crew}>
               {CREW.map((c, i) => (

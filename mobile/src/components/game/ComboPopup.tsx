@@ -15,6 +15,8 @@ export function ComboPopup({ combo }: { combo: ComboFx | null }) {
     if (!combo) return;
     setShown(combo);
     s.value = withSequence(withSpring(1, { damping: 8, stiffness: 320 }), withDelay(650, withTiming(0, { duration: 200 })));
+    const t = setTimeout(() => setShown(null), 1000); // never linger (e.g. after restart)
+    return () => clearTimeout(t);
   }, [combo, s]);
   const anim = useAnimatedStyle(() => ({ opacity: Math.min(1, s.value * 1.5), transform: [{ scale: 0.4 + s.value * 0.6 }, { rotate: `${(1 - s.value) * -12}deg` }] }));
   if (!shown) return null;

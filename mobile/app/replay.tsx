@@ -113,8 +113,8 @@ export default function ReplayScreen() {
           <Ionicons name="close" size={22} color={colors.onSurface} />
         </Pressable>
         <View style={styles.flex}>
-          <Text style={[styles.kicker, { color: colors[sector.accent] }]} numberOfLines={1}>
-            COMBO ×{data.combo} REPLAY · {data.levelRef.startsWith("d") ? `DAILY ${data.levelRef.slice(1)}` : `LEVEL ${level.levelId}`}
+          <Text style={[styles.kicker, { color: colors[sector.accent] }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7}>
+            COMBO ×{data.combo} REPLAY · {data.levelRef.startsWith("d") ? `DAILY ${data.levelRef.slice(1)}` : level.boss ? `BOSS ${level.boss.title.toUpperCase()}` : `LEVEL ${level.levelId}`}
           </Text>
           <Text style={styles.title} testID="replay-title" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
             @{data.handle}
@@ -142,7 +142,7 @@ export default function ReplayScreen() {
 }
 
 const useStyles = makeStyles((c) => ({
-  root: { flex: 1, backgroundColor: c.surface },
+  root: { flex: 1, backgroundColor: c.surface, overflow: "hidden" },
   center: { alignItems: "center", justifyContent: "center", padding: 24, gap: 8 },
   topBar: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingBottom: 8 },
   iconBtn: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: c.surfaceSecondary, alignItems: "center", justifyContent: "center" },

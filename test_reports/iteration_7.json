@@ -1,0 +1,28 @@
+{
+  "summary": "Round 5 retest, mobile only, web preview at 390x844 and 375x667. Boss stars now persist across a reload. After winning boss 120, sr_stars_120=3, and after the reload boss-tile-120-stars shows 3 filled stars. The hangar count goes 5 to 8 (2+3+3), and Propeller Beanie and Space Bubbles stay unlocked after the reload. Settings > Reset progress removes sr_stars_120, sr_stars_20, sr_stars_1 and sr_hat, and after a reload there are 0 stars and boss 120 is locked again. Ghost-bay fix verified on daily 2026-10-31. A genuine jam (prefix, then purple-01 and green-01 50ms apart) followed by deadlock-restart-button shows all 3 bays 'Open' at +100ms, +500ms, +1.5s and +3.5s, with moves at 0. A control-bar restart after one ship departed, and a restart while a ship was flying away, also give all 3 bays 'Open'. Regenerated boss 120: the new solution wins. The intro reads 'Magma Leviathan', the header is 'LAVA MOON · SECTOR BOSS', the title is 'Magma Leviathan Defeated!', the boss badge shows, and the next button is 'Next Level (21)'. L25 and L30 victory show 'Face the Sector Boss', and L30 goes to /game?level=130. Boss 130 shows the 'BOSS DEFEATED!' banner, then 'Neon Overlord Defeated!' and 'All Sectors Cleared', which goes to /?stage=complete with the notice 'All 4 sectors cleared! ...'. No horizontal overflow: max document scrollWidth at 375 wide was 375 while ships departed on L1, L25, L30 and B130 (390 on daily). Smoke passes: home, L1 win (Next Level (2)), daily screen (6 leaderboard rows, not offline), hangar and its back button, with no page errors. One item is still open: the boss replay kicker is still truncated on web at 390px.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Replay (/replay?code=SR1.120..., 390 wide, web)", "issues": ["LOW: the kicker 'COMBO ×7 REPLAY · BOSS MAGMA LEVIATHAN' is still shown as 'COMBO ×7 REPLAY · BOSS MAGMA LEVIATH…' (fontSize stays 11px, scrollWidth 310 > clientWidth 302). adjustsFontSizeToFit/minimumFontScale are not supported by react-native-web, so the font-shrink fix only works on native. Web fix: compute fontSize from the text length or available width (e.g. 9-10px for boss kickers), drop the letterSpacing for long kickers, or use numberOfLines={2}."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [".screenshots/boss120_win.png", ".screenshots/home_after_reload.png", ".screenshots/daily_after_restart.png", ".screenshots/boss130_win.png", ".screenshots/replay120.png"],
+  "action_items": [
+    "LOW: the replay kicker for boss names is still truncated on web at 390px because adjustsFontSizeToFit is native-only. Use a width/length-based fontSize or 2 lines."
+  ],
+  "critical_code_review_comments": [
+    "DockBays: the ghost is now cleared in its own effect keyed on the ghost, plus an explicit clear when there is no ship and no previous ship (restart/undo). Correct.",
+    "prefs.ts: STAR_IDS now includes BOSS_IDS [120,125,130], but it is hard-coded and duplicates levels_bosses.ts. Consider deriving it from BOSS_LEVELS.map(l => l.levelId) so a future boss isn't missed.",
+    "The settings Reset progress button resets immediately with no confirmation. That is pre-existing, but it is risky for a destructive action."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "~97% (all retested fixes pass; only the LOW web kicker truncation remains)"},
+  "seed_data_creation": "localStorage seeding only (sr_stars_*). No daily score was posted: the daily was only played to a jam or a restart.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Replay code format: SR1.<levelRef>.<fromMove>.<combo>.<handle>.<moves joined by ~>. Settings reset: home-settings-button then settings-reset-button (use locator.scroll_into_view_if_needed; it can report 'outside viewport' while the sheet animates). Boss 120 solution: orange-01,cyan-01,pink-02,yellow-01,purple-01,green-01,red-01,pink-01,yellow-02. Boss 130: orange-01,green-01,purple-02,pink-01,cyan-02,purple-01,cyan-01,yellow-01,pink-02,yellow-02. Tapping a ship every ~2.2s is reliable.",
+  "rca_of_issue": "Replay kicker truncation on web: react-native-web ignores adjustsFontSizeToFit and minimumFontScale, so the numberOfLines={1} ellipsis still applies."
+}
