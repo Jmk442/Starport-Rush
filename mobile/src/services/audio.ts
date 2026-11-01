@@ -80,33 +80,116 @@ const TRACKS: Record<MusicTrack, number> = {
 };
 const musicPlayers: Partial<Record<MusicTrack, AudioPlayer>> = {};
 let track: MusicTrack = "default";
-let wantActive = false;
 
-/** Switch the looping track (sector music). Old track pauses; session stays active (keepalive). */
+// Music only plays while a level/boss/daily/rush is actually being played (set by the game
+// screen), fades in/out, and leaves a quiet gap between loop passes. Players are created once
+// and kept (keepAudioSessionActive) so the Round 3 iPhone fix still holds across level changes.
+const MUSIC_VOL = 0.3;
+const FADE_IN_MS = 900;
+const FADE_OUT_MS = 700;
+const LOOP_GAP_MS = 3000;
+let wantPlay = false; // gameplay on screen
+let appActive = true;
+let gestured = Platform.OS !== "web"; // web: no autoplay before the first tap
+let fadeTimer: ReturnType<typeof setInterval> | null = null;
+let gapTimer: ReturnType<typeof setTimeout> | null = null;
+let fadingOut = false;
+
+const shouldPlay = () => wantPlay && appActive && gestured && getPrefs().music;
+
+function trackPlayer(t: MusicTrack) {
+  let p = musicPlayers[t];
+  if (!p) {
+    p = musicPlayers[t] = createAudioPlayer(TRACKS[t], PLAYER_OPTS);
+    p.loop = false; // we loop by hand to leave a quiet gap between passes
+    p.volume = 0;
+    const self = p;
+    p.addListener("playbackStatusUpdate", (s) => {
+      if (!s.didJustFinish || music !== self) return;
+      if (gapTimer) clearTimeout(gapTimer);
+      gapTimer = setTimeout(() => {
+        gapTimer = null;
+        if (music === self && shouldPlay()) {
+          self.seekTo(0).catch(() => {});
+          fadeIn();
+        }
+      }, LOOP_GAP_MS);
+    });
+  }
+  return p;
+}
+
+function ramp(p: AudioPlayer, to: number, ms: number, done?: () => void) {
+  if (fadeTimer) clearInterval(fadeTimer);
+  const from = p.volume;
+  const steps = Math.max(1, Math.round(ms / 50));
+  let i = 0;
+  fadeTimer = setInterval(() => {
+    i += 1;
+    p.volume = from + ((to - from) * i) / steps;
+    if (i >= steps) {
+      if (fadeTimer) clearInterval(fadeTimer);
+      fadeTimer = null;
+      done?.();
+    }
+  }, 50);
+}
+
+function fadeIn(fromStart = false) {
+  try {
+    ensureMode();
+    const p = (music = trackPlayer(track));
+    fadingOut = false;
+    if (!p.playing) {
+      if (fromStart || p.currentTime >= p.duration - 0.05) p.seekTo(0).catch(() => {});
+      p.volume = 0;
+      p.play();
+    }
+    ramp(p, MUSIC_VOL, FADE_IN_MS);
+  } catch {
+    // audio unavailable — silent by design
+  }
+}
+
+function fadeOut() {
+  if (gapTimer) clearTimeout(gapTimer);
+  gapTimer = null;
+  const p = music;
+  if (!p || !p.playing) return;
+  fadingOut = true;
+  ramp(p, 0, FADE_OUT_MS, () => {
+    fadingOut = false;
+    if (!shouldPlay()) p.pause();
+  });
+}
+
+function applyMusic(fromStart = false) {
+  if (shouldPlay()) {
+    if (fromStart && gapTimer) {
+      clearTimeout(gapTimer);
+      gapTimer = null;
+    }
+    if (!gapTimer) fadeIn(fromStart);
+  } else fadeOut();
+}
+
+/** Called by the game screen: true while a puzzle is being played (not intro/victory/jam).
+ * Each new play session starts the loop from the top. */
+export function setMusicPlaying(on: boolean) {
+  if (on === wantPlay) return;
+  wantPlay = on;
+  applyMusic(on);
+}
+
+/** Switch the track (sector/boss music). Old track stops; players stay alive (keepalive). */
 export function setMusicTrack(next: MusicTrack) {
   if (next === track) return;
   musicPlayers[track]?.pause();
+  if (gapTimer) clearTimeout(gapTimer);
+  gapTimer = null;
   track = next;
   music = musicPlayers[track] ?? null;
-  syncMusic(wantActive);
-}
-
-export function syncMusic(active: boolean) {
-  wantActive = active;
-  const want = active && getPrefs().music;
-  try {
-    if (want) {
-      ensureMode();
-      if (!music) {
-        music = musicPlayers[track] = createAudioPlayer(TRACKS[track], PLAYER_OPTS);
-        music.loop = true;
-        music.volume = 0.3;
-      }
-      music.play();
-    } else music?.pause();
-  } catch {
-    // ignore
-  }
+  applyMusic();
 }
 
 export function currentTrack() {
@@ -118,23 +201,30 @@ export function musicStatus(): "playing" | "stopped" | "off" {
   return music?.playing ? "playing" : "stopped";
 }
 
-/** Root-level music owner: loops across all screens/levels, pauses in background, self-heals. */
+/** Root-level music owner: follows the music toggle, pauses in background, self-heals. */
 export function useMusicController() {
   const { music: on, loaded } = usePrefs();
   useEffect(() => {
     if (!loaded) return;
-    let active = AppState.currentState === "active" || Platform.OS === "web";
-    syncMusic(active && on);
+    appActive = AppState.currentState === "active" || Platform.OS === "web";
+    applyMusic();
     const sub = AppState.addEventListener("change", (s) => {
-      active = s === "active";
-      syncMusic(active && on);
+      appActive = s === "active" || Platform.OS === "web";
+      applyMusic();
     });
+    const onGesture = () => {
+      gestured = true;
+      applyMusic();
+    };
+    if (Platform.OS === "web" && typeof document !== "undefined") document.addEventListener("pointerdown", onGesture, { once: true });
+    // watchdog (Round 3 iPhone fix): re-play if the system stopped it while it should be on
     const watchdog = setInterval(() => {
-      if (active && on && music && !music.playing) syncMusic(true);
+      if (shouldPlay() && !gapTimer && !fadingOut && music && !music.playing) fadeIn();
     }, 1500);
     return () => {
       sub.remove();
       clearInterval(watchdog);
+      if (Platform.OS === "web" && typeof document !== "undefined") document.removeEventListener("pointerdown", onGesture);
     };
   }, [on, loaded]);
 }

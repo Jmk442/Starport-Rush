@@ -30,7 +30,7 @@ import { DAILY_SECTOR, musicFor, sectorFor } from "@/src/game/sectors";
 import type { LevelDef } from "@/src/game/types";
 import { starsFor, useGameSession } from "@/src/game/useGameSession";
 import { COLOR_LABEL } from "@/src/game/visuals";
-import { setMusicTrack } from "@/src/services/audio";
+import { setMusicPlaying, setMusicTrack } from "@/src/services/audio";
 import { saveLocal, saveRushLocal, syncDaily, syncRush } from "@/src/services/leaderboard";
 import { getPrefs, recordStars, usePrefs } from "@/src/services/prefs";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
@@ -136,6 +136,11 @@ function GameBody({ level, daily, rush }: { level: LevelDef; daily?: string; rus
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [display.status, stars, level.levelId, daily]);
   const won = display.status === "WON";
+  // Music only while the puzzle is actually being played (not during a boss intro or on the
+  // victory/jam screens); fades out when leaving the screen.
+  const musicOn = !intro && display.status === "PLAYING";
+  useEffect(() => setMusicPlaying(musicOn), [musicOn]);
+  useEffect(() => () => setMusicPlaying(false), []);
   useEffect(() => {
     if (!inRush || !won || rushInfo) return;
     stopClock();

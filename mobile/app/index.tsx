@@ -15,7 +15,7 @@ import { totalStars } from "@/src/game/cosmetics";
 import { getLevel, LEVELS } from "@/src/game/levels";
 import { decodeReplay, findReplayCode } from "@/src/game/replay";
 import { SECTORS } from "@/src/game/sectors";
-import { setMusicTrack } from "@/src/services/audio";
+import { setMusicPlaying } from "@/src/services/audio";
 import { usePrefs } from "@/src/services/prefs";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
 
@@ -44,7 +44,7 @@ export default function Home() {
     if (!found || !decodeReplay(found)) return setCodeError(true);
     router.push({ pathname: "/replay", params: { code: found } });
   };
-  useFocusEffect(useCallback(() => setMusicTrack("default"), []));
+  useFocusEffect(useCallback(() => setMusicPlaying(false), []));
 
   return (
     <View style={styles.root} testID="home-screen">
