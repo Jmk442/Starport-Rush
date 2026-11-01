@@ -1,5 +1,6 @@
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Modal, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
@@ -20,6 +21,7 @@ export function SettingsSheet({ visible, onClose }: { visible: boolean; onClose:
   const styles = useStyles();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const prefs = usePrefs();
   const [draft, setDraft] = useState(prefs.handle);
   const [, tick] = useState(0);
@@ -70,7 +72,7 @@ export function SettingsSheet({ visible, onClose }: { visible: boolean; onClose:
           </Pressable>
         </View>
         <Text testID="settings-handle-hint" style={[styles.note, !valid && { color: colors.error }]}>
-          {valid ? "Shown on your share card. Tap the dice for a silly new one." : "3-16 letters, numbers or _"}
+          {valid ? "Shown on your share card. Tap the dice for a silly new one." : /^[A-Za-z0-9_]{3,16}$/.test(draft) ? "That name isn't allowed. Try another." : "3-16 letters, numbers or _"}
         </Text>
         {TOGGLES.map((t) => (
           <View key={t.key} style={styles.row}>
@@ -99,6 +101,19 @@ export function SettingsSheet({ visible, onClose }: { visible: boolean; onClose:
               <Text style={styles.diagLabel}>{k}</Text>
             </View>
           ))}
+        </View>
+        <View style={styles.actions}>
+          <Pressable
+            testID="settings-privacy-button"
+            onPress={() => {
+              commit();
+              onClose();
+              router.push("/privacy");
+            }}
+            style={({ pressed }) => [styles.btn, styles.secondary, pressed && styles.pressed]}
+          >
+            <Text style={styles.btnText}>Privacy Policy</Text>
+          </Pressable>
         </View>
         <View style={styles.actions}>
           <Pressable testID="settings-reset-button" onPress={resetProgress} style={({ pressed }) => [styles.btn, styles.secondary, pressed && styles.pressed]}>

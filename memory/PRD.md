@@ -74,3 +74,11 @@ Expo app requirement: /app/memory/product/requirements.md (+ full_spec.md). Prem
 - P1: on-device check of haptics, pitch-rising audio and the image share card in Expo Go on iPhone; frame-rate profiling
 - P1: Levels 6+ (generator in tests/generate_levels.ts already supports specs)
 - P2: Skia renderer evaluation on native; daily seeded challenge level
+
+## Round 8 (Sep 2026) — Name Safety, Privacy Policy, Home on win screens
+- Offensive-handle filter, client (src/game/profanity.ts) + server (backend/moderation.py, kept in sync): leetspeak/repeat-letter aware, with an allow list for innocent words (Scunthorpe, Uranus, Crisis...). If a saved handle is now blocked, a new random one replaces it.
+- Report a handle: flag on other players' rows (Daily/Weekly/Boss Rush) -> ReportSheet -> POST /api/reports. Hidden at once on the reporting device; shown as "HiddenPilot" for everyone once 3 different devices report it.
+- Privacy Policy: in-app /privacy screen (Home link + Settings row); web copies at /api/privacy and /privacy.html. Contact: johntilv4575@gmail.com.
+- Home button on victory screens (Boss Rush: "Home (ends run)").
+- Tests: backend 73 passed, engine 112 passed, daily/replay passed; testing agent iteration 11 passed.
+- Backlog: harder-to-fake report identity/rate limits; confirm the policy "Last updated" date before store submission.

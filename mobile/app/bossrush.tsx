@@ -9,6 +9,9 @@ import { Starfield } from "@/src/components/Starfield";
 import { formatMs, isRushUnlocked, RUSH_BOSSES, startRush, UNDO_PENALTY_MS } from "@/src/game/bossRush";
 import { getLevel } from "@/src/game/levels";
 import { fetchRushBoard, getRushBest, type RushBoard, type RushResult, syncRush } from "@/src/services/leaderboard";
+import { ReportFlag, ReportSheet, shownHandle } from "@/src/components/ReportSheet";
+import { HIDDEN_HANDLE } from "@/src/game/profanity";
+import { useReportedHandles } from "@/src/services/reports";
 import { usePrefs } from "@/src/services/prefs";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
 
@@ -23,6 +26,8 @@ export default function BossRushScreen() {
   const [board, setBoard] = useState<RushBoard | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "offline">("loading");
   const [refreshing, setRefreshing] = useState(false);
+  const reported = useReportedHandles();
+  const [reportTarget, setReportTarget] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setBest(await getRushBest());
@@ -118,17 +123,17 @@ export default function BossRushScreen() {
       </View>
       <FlatList
         data={board?.entries ?? []}
-        keyExtractor={(e) => `${e.rank}-${e.handle}`}
+        keyExtractor={(e, i) => `${i}-${e.rank}-${e.handle}`}
         ListHeaderComponent={header}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}
         ListEmptyComponent={state === "ok" ? <Text style={styles.empty}>No runs yet. Set the first time!</Text> : undefined}
-        renderItem={({ item }) => (
-          <View testID={`rush-row-${item.rank}`} style={[styles.row, item.is_you && styles.rowYou]}>
+        renderItem={({ item, index }) => (
+          <View testID={`rush-row-${index + 1}`} style={[styles.row, item.is_you && styles.rowYou]}>
             <Text style={[styles.rank, item.rank <= 3 && { color: colors.yellow }]}>#{item.rank}</Text>
             <View style={styles.flex}>
               <Text style={styles.handle} numberOfLines={1}>
-                @{item.handle}
+                @{shownHandle(item.handle, reported)}
                 {item.is_you ? " (you)" : ""}
               </Text>
               <Text style={styles.meta} numberOfLines={1}>
@@ -136,10 +141,14 @@ export default function BossRushScreen() {
                 {item.undos ? ` · ${item.undos} undo${item.undos > 1 ? "s" : ""}` : ""}
               </Text>
             </View>
+            {!item.is_you && shownHandle(item.handle, reported) === item.handle && item.handle !== HIDDEN_HANDLE && (
+              <ReportFlag testID={`rush-report-${index + 1}`} onPress={() => setReportTarget(item.handle)} />
+            )}
             <Text style={styles.score}>{formatMs(item.ms)}</Text>
           </View>
         )}
       />
+      <ReportSheet target={reportTarget} board="bossrush" onClose={() => setReportTarget(null)} />
     </View>
   );
 }

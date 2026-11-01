@@ -2,7 +2,7 @@
 // never leaves the device, no identifiers).
 import { useSyncExternalStore } from "react";
 
-import { type HatId, randomHandle, type TrailId } from "@/src/game/cosmetics";
+import { type HatId, isValidHandle, randomHandle, type TrailId } from "@/src/game/cosmetics";
 import { BOSS_LEVELS } from "@/src/game/levels_bosses";
 import { storage } from "@/src/utils/storage";
 
@@ -74,7 +74,8 @@ export async function loadPrefs() {
   const diag = { ...prefs.diag };
   for (const k of DIAG_KEYS) diag[k] = (await storage.getItem(`sr_diag_${k}`, 0)) ?? 0;
   let handle: string = (await storage.getItem("sr_handle", "")) ?? "";
-  if (!handle) {
+  if (!isValidHandle(handle)) {
+    // empty, or a saved name the server would now reject
     handle = randomHandle();
     storage.setItem("sr_handle", handle);
   }

@@ -267,6 +267,7 @@ function GameBody({ level, daily, rush }: { level: LevelDef; daily?: string; rus
                     router.setParams({ level: String(advanceRush()), rush: "1" });
                   },
                 },
+            { id: "home", label: rushInfo.final ? "Home" : "Home (ends run)", onPress: () => router.dismissTo("/") },
           ]}
         >
           {rushInfo.final && (
@@ -308,6 +309,7 @@ function GameBody({ level, daily, rush }: { level: LevelDef; daily?: string; rus
             },
             ...(session.bestCombo >= 2 ? [{ id: "share-replay", label: `Share Combo ×${session.bestCombo} Replay`, onPress: shareReplay }] : []),
             ...(daily ? [] : [{ id: "replay", label: "Replay", onPress: () => session.dispatch({ type: "RESTART" }) }]),
+            { id: "home", label: "Home", onPress: () => router.dismissTo("/") },
           ]}
         >
           {boss && (

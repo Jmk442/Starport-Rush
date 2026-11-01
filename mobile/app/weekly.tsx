@@ -9,6 +9,9 @@ import { Starfield } from "@/src/components/Starfield";
 import { todayKey } from "@/src/game/daily";
 import { daysElapsed, formatCountdown, msUntilWeekEnd, weekEndKey, weekStartKey } from "@/src/game/weekly";
 import { fetchWeekly, syncDaily, type WeeklyBoard } from "@/src/services/leaderboard";
+import { ReportFlag, ReportSheet, shownHandle } from "@/src/components/ReportSheet";
+import { HIDDEN_HANDLE } from "@/src/game/profanity";
+import { useReportedHandles } from "@/src/services/reports";
 import { usePrefs } from "@/src/services/prefs";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
 
@@ -24,6 +27,8 @@ export default function WeeklyScreen() {
   const [state, setState] = useState<"loading" | "ok" | "offline">("loading");
   const [refreshing, setRefreshing] = useState(false);
   const [left, setLeft] = useState(msUntilWeekEnd(week));
+  const reported = useReportedHandles();
+  const [reportTarget, setReportTarget] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setInterval(() => setLeft(msUntilWeekEnd(week)), 30000);
@@ -89,7 +94,7 @@ export default function WeeklyScreen() {
             <View key={`${e.rank}-${e.handle}`} style={styles.lastRow} testID={`weekly-last-${e.rank}`}>
               <Ionicons name="trophy" size={16} color={e.rank === 1 ? colors.yellow : colors.onSurfaceSecondary} />
               <Text style={styles.lastHandle} numberOfLines={1}>
-                @{e.handle}
+                @{shownHandle(e.handle, reported)}
                 {e.is_you ? " (you)" : ""}
               </Text>
               <Text style={styles.lastScore}>{e.total}</Text>
@@ -123,27 +128,31 @@ export default function WeeklyScreen() {
       </View>
       <FlatList
         data={board?.entries ?? []}
-        keyExtractor={(e) => `${e.rank}-${e.handle}`}
+        keyExtractor={(e, i) => `${i}-${e.rank}-${e.handle}`}
         ListHeaderComponent={header}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}
         ListEmptyComponent={state === "ok" ? <Text style={styles.empty}>No dailies played this week yet. Be first!</Text> : undefined}
-        renderItem={({ item }) => (
-          <View testID={`weekly-row-${item.rank}`} style={[styles.row, item.is_you && styles.rowYou]}>
+        renderItem={({ item, index }) => (
+          <View testID={`weekly-row-${index + 1}`} style={[styles.row, item.is_you && styles.rowYou]}>
             <Text style={[styles.rank, item.rank <= 3 && { color: colors.yellow }]}>#{item.rank}</Text>
             <View style={styles.flex}>
               <Text style={styles.handle} numberOfLines={1}>
-                @{item.handle}
+                @{shownHandle(item.handle, reported)}
                 {item.is_you ? " (you)" : ""}
               </Text>
               <Text style={styles.meta}>
                 {item.days}/7 days played
               </Text>
             </View>
+            {!item.is_you && shownHandle(item.handle, reported) === item.handle && item.handle !== HIDDEN_HANDLE && (
+              <ReportFlag testID={`weekly-report-${index + 1}`} onPress={() => setReportTarget(item.handle)} />
+            )}
             <Text style={styles.score}>{item.total}</Text>
           </View>
         )}
       />
+      <ReportSheet target={reportTarget} board="weekly" onClose={() => setReportTarget(null)} />
     </View>
   );
 }

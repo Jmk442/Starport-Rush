@@ -193,6 +193,9 @@ export default function Home() {
             That doesn&apos;t look like a replay code.
           </Text>
         )}
+        <Pressable testID="home-privacy-link" onPress={() => router.push("/privacy")} style={styles.privacyLink}>
+          <Text style={styles.privacyText}>Privacy Policy</Text>
+        </Pressable>
       </KeyboardAwareScrollView>
       <SettingsSheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </View>
@@ -240,6 +243,8 @@ const useStyles = makeStyles((c) => ({
   topRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   daily: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: c.neonCell, borderRadius: radius.lg, borderWidth: 1.5, borderColor: c.neonAccent, padding: 12, marginBottom: 12, minHeight: 64 },
   modeRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
+  privacyLink: { alignSelf: "center", minHeight: 44, justifyContent: "center", paddingHorizontal: 16, marginTop: 16 },
+  privacyText: { fontFamily: fonts.text, fontSize: 13, color: c.muted, textDecorationLine: "underline" },
   mode: { flex: 1, backgroundColor: c.surfaceSecondary, borderRadius: radius.lg, borderWidth: 1.5, padding: 12, gap: 4, minHeight: 96 },
   modeKicker: { fontFamily: fonts.display, fontSize: 11, letterSpacing: 2 },
   modeTitle: { fontFamily: fonts.display, fontSize: 14, color: c.onSurface },

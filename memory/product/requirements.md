@@ -72,3 +72,10 @@ Round 6 decisions (user approved the builder's defaults): Boss Rush unlocks afte
 
 ## Round 7
 User's words: "before you press play level one the music is already playing, in between levels, the music keeps playing also it's very annoying" / "The music never stops playing unless you turn it off, which means there's no point in having it there" / "all screen that I have played so far have the music playing non-stop there is no break"
+
+## Round 8 (iOS build succeeded; Bundle ID com.johnkenneally.starportrush)
+User's words:
+"Privacy Page: Add a simple privacy policy page and link for App Store submission"
+"Home Button: Add a Home button to the victory screen so players can get back to the main menu"
+"Name Safety: Add a profanity filter and a Report button for player handles before launch"
+Notes: the privacy page must be reachable at a public URL on the deployed site (for App Store Connect) and linked in the app. Contact email: use a placeholder until the user supplies it. After the changes, rerun /app/frontend/scripts/build-game.sh so the web copy stays in sync.

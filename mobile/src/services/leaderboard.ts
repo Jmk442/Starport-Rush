@@ -63,7 +63,7 @@ export async function saveLocal(date: string, r: DailyResult) {
   return true;
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 8000);
   try {

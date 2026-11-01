@@ -7,7 +7,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Starfield } from "@/src/components/Starfield";
 import { dailyLevel, todayKey } from "@/src/game/daily";
+import { HIDDEN_HANDLE } from "@/src/game/profanity";
 import { type DailyResult, fetchLeaderboard, getLocalBest, type Leaderboard, syncDaily } from "@/src/services/leaderboard";
+import { ReportFlag, ReportSheet, shownHandle } from "@/src/components/ReportSheet";
+import { useReportedHandles } from "@/src/services/reports";
 import { usePrefs } from "@/src/services/prefs";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
 
@@ -23,6 +26,8 @@ export default function DailyScreen() {
   const [state, setState] = useState<"loading" | "ok" | "offline">("loading");
   const [refreshing, setRefreshing] = useState(false);
   const level = dailyLevel(date);
+  const reported = useReportedHandles();
+  const [reportTarget, setReportTarget] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setBest(await getLocalBest(date));
@@ -106,17 +111,17 @@ export default function DailyScreen() {
       </View>
       <FlatList
         data={board?.entries ?? []}
-        keyExtractor={(e) => `${e.rank}-${e.handle}`}
+        keyExtractor={(e, i) => `${i}-${e.rank}-${e.handle}`}
         ListHeaderComponent={header}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}
         ListEmptyComponent={state === "ok" ? <Text style={styles.empty}>No scores yet. Be the first pilot on the board!</Text> : undefined}
-        renderItem={({ item }) => (
-          <View testID={`leaderboard-row-${item.rank}`} style={[styles.row, item.is_you && styles.rowYou]}>
+        renderItem={({ item, index }) => (
+          <View testID={`leaderboard-row-${index + 1}`} style={[styles.row, item.is_you && styles.rowYou]}>
             <Text style={[styles.rank, item.rank <= 3 && { color: colors.yellow }]}>#{item.rank}</Text>
             <View style={styles.flex}>
               <Text style={styles.handle} numberOfLines={1}>
-                @{item.handle}
+                @{shownHandle(item.handle, reported)}
                 {item.is_you ? " (you)" : ""}
               </Text>
               <Text style={styles.meta}>
@@ -124,6 +129,9 @@ export default function DailyScreen() {
                 {item.best_combo >= 2 ? ` · combo ×${item.best_combo}` : ""}
               </Text>
             </View>
+            {!item.is_you && shownHandle(item.handle, reported) === item.handle && item.handle !== HIDDEN_HANDLE && (
+              <ReportFlag testID={`leaderboard-report-${index + 1}`} onPress={() => setReportTarget(item.handle)} />
+            )}
             {item.replay_code && (
               <Pressable testID={`leaderboard-watch-${item.rank}`} hitSlop={6} onPress={() => router.push({ pathname: "/replay", params: { code: item.replay_code! } })} style={styles.watch}>
                 <Ionicons name="play" size={14} color={colors.onSurface} />
@@ -133,6 +141,7 @@ export default function DailyScreen() {
           </View>
         )}
       />
+      <ReportSheet target={reportTarget} board="daily" onClose={() => setReportTarget(null)} />
     </View>
   );
 }

@@ -1,0 +1,50 @@
+{
+  "summary": "Round 8 tested: Name Safety, Privacy Policy and the Home button on victory screens. Backend: 73/73 tests pass (the existing 61 plus 12 new ones in test_name_safety_boards.py covering daily rejection and acceptance, masking on daily, weekly and last_week_top, and report validation). Mobile web at 390x844: every requested flow works. Settings blocks FuckFace, Sh1tLord and Uranus, and closing the sheet doesn't save them. The dice made 5 valid handles. Privacy opens from the home link and from settings (also mid-game, and the game state is kept); back works. The flag buttons work on Daily, Weekly and Boss Rush, and there is no flag on your own row. The sheet's cancel, backdrop and submit all work; after a report the row shows HiddenPilot, and this survives a reload. A report on Daily also hides the name on Weekly. The Home button works on level and daily victories. Boss Rush between bosses shows 'Next Boss (2/3)' and 'Home (ends run)', and the run really ends. Next, Replay, the jam overlay, and 'music only in game' all work. The main finding is that the profanity filter blocks many innocent names.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "moderation.is_profane (server + profanity.ts)", "issue": "Substring matching blocks innocent names: Uranus, Janus, Manuscript (anus); Crisis, Mississippi (isis after letter collapse); Thorny (horny); Basement (semen); Scraper, Trapeze, Parapet (rape); Swanky (wank); Hitchcock, Cockatoo, Shuttlecock (cock); Shiitake (shit); Fukuoka (fuk); Dickinson (dick); Retardant; Penistone. 'Uranus' is a likely handle in a space game."},
+      {"endpoint": "POST /api/reports", "issue": "Anyone can hide any handle: device IDs come from the client and the server doesn't check them, so 3 made-up IDs hide a name for everyone. The server also doesn't check that the handle is on that board, or that you aren't reporting yourself. The HiddenPilot check is case-sensitive, so 'hiddenpilot' is accepted. Fine for a first version, but worth a rate limit or an IP check."},
+      {"endpoint": "GET leaderboards", "issue": "_hidden_handles() runs a $group over the whole handle_reports collection on every leaderboard GET. Fine for now, but it should be cached or stored as a hidden_handles collection as reports grow."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "bossrush.tsx / daily.tsx / weekly.tsx rows", "issue": "Row and flag testIDs use the rank, and tied ranks share one. Two seeded 1:00.0 runs both rendered rush-row-1 and rush-report-1. The keyExtractor `${rank}-${handle}` also clashes when two tied entries are both masked to HiddenPilot, which gives a duplicate React key.", "testID": "rush-row-<rank>, rush-report-<rank>", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Leaderboard rows", "issues": ["The flag icon is 14px in the muted colour inside a 32x32 target. hitSlop 8 brings it to about 48, so it is usable but hard to see; this is acceptable."]},
+      {"screen": "Privacy (app + web)", "issues": ["'Last updated: 1 November 2026' is hardcoded. The container clock says 2026-11-01, but the real date may differ, so check it before submitting to the stores."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_name_safety.py", "/app/backend/tests/test_name_safety_boards.py", "/app/test_reports/pytest/pytest_results_iter11.xml"],
+  "action_items": [
+    "MEDIUM: Reduce false positives in the profanity filter (keep both files in sync). Add more words to ALLOWED: uranus, janus, manus, crisis, mississippi, thorny, basement, scrape, trapeze, parapet, swank, hitchcock, cockatoo, shuttlecock, shiitake, fukuoka, dickinson, penistone. Or match 'anus', 'isis', 'semen', 'horny', 'rape', 'wank' only as whole words or at the start of a token.",
+    "LOW: Handles already saved before Round 8 are not migrated. If a saved sr_handle is now blocked, every daily or rush post gets a 422 and is marked 'rejected', so the score never posts. Fix: on prefs load, if isProfane(handle), replace it with randomHandle().",
+    "LOW: Make row and flag testIDs and the keyExtractor unique when ranks tie (use the index or the position).",
+    "LOW (optional): Add basic abuse protection to /api/reports, such as a per-IP rate limit and checking the handle exists on that board."
+  ],
+  "critical_code_review_comments": [
+    "server.py ReportIn: `v == HIDDEN_HANDLE` is case-sensitive; compare lowercase.",
+    "game.tsx: opening Privacy from the in-game Settings pushes /privacy over the game. In Boss Rush the rush clock keeps running while the player reads the policy. Not tested, minor.",
+    "reports.ts: the local hide list only ever grows and there is no way to undo a report. This is acceptable."
+  ],
+  "verified_working": [
+    "POST daily and bossrush: Sh1tLord, FUUUCK, N4zi99, F_u_c_k and xXdickXx get 422 'handle not allowed'. Scunthorpe, CocktailX, Dickens, SpicyGlorp42 and Passenger are accepted on daily.",
+    "Reports: the same reporter twice gives duplicate:true, and the handle check ignores case. A name is still visible with 2 reporters; at 3 it becomes HiddenPilot on daily (entries and you), weekly (entries and you) and last_week_top. Bad board, bad reason or 'HiddenPilot' give 422.",
+    "GET /api/privacy returns 200 text/html with the contact email. The in-app privacy screen has all sections, the email and the web link.",
+    "All 16x16x90 dice handles pass the filter.",
+    "Report sheet: the reason options, Cancel (no POST sent), backdrop close, submit (POST body correct, 200), the done message and the Done button all work. Locally hidden rows lose their flag. The hide list is stored in sr_reported and survives a reload.",
+    "Victory screens: level 1 shows Next/Share/Share Replay/Replay/Home; daily shows View Leaderboard/Share/Share Replay/Home. Home goes to /, Next goes to level 2, and Replay restarts the level.",
+    "Boss Rush: 'Next Boss (2/3)' leads to the 'BOSS RUSH 2/3' intro. 'Home (ends run)' goes to /, and afterwards the deep link /game?level=125&rush=1 loads as a normal sector boss with no rush clock.",
+    "Jam overlay appears on level 2 (cyan-02, green-01, pink-01, cyan-01) and Undo clears it. Music: stopped on home, playing in game, stopped again after going home."
+  ],
+  "updated_files": ["/app/backend/tests/test_name_safety_boards.py (new)"],
+  "success_rate": {"backend": "100% (73/73)", "frontend": "100% of requested flows; 1 low-priority testID/key bug when ranks tie"},
+  "seed_data_creation": "None kept. Temporary daily and bossrush scores and reports with test- device ids were deleted. The 6 real daily scores are untouched; bossrush_scores and handle_reports are both empty now.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Container date is 2026-11-01 (Sunday); weekly start is 2026-10-26. Solutions: level 1 is [cyan-01, yellow-01, pink-01]. Daily 2026-11-01 is [cyan-01, purple-01, yellow-01, green-01, pink-01, purple-02, orange-01, cyan-02]. Boss 120 is [orange-01, cyan-01, pink-02, yellow-01, purple-01, green-01, red-01, pink-01, yellow-02]. Level 2 jam: [cyan-02, green-01, pink-01, cyan-01]. Compute other solutions with esbuild bundling src/game/solver.ts (see /tmp/sol/s.ts pattern; alias @=/app/mobile). Web storage keys hold JSON values: sr_handle, sr_device, sr_reported, sr_stars_<id>. To unlock the rush, set sr_stars_1..30 and sr_stars_120/125/130 to 3. Boss intro button: boss-intro-start-button. Victory button testIDs are victory-<id>-button. pytest.ini uses xdist."
+}

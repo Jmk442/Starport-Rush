@@ -1,4 +1,6 @@
 // Unlockable cosmetics, earned by total stars (max 15 levels x 3 = 45).
+import { isProfane } from "./profanity";
+
 export type HatId = "none" | "party" | "propeller" | "tophat" | "cone" | "crown" | "chef" | "viking" | "halo" | "fishbowl";
 export type TrailId = "none" | "sparkle" | "bubbles" | "hearts" | "rainbow" | "lightning" | "confetti" | "flame";
 
@@ -55,4 +57,4 @@ export function randomHandle(rand: () => number = Math.random) {
 export function sanitizeHandle(raw: string) {
   return raw.replace(/[^A-Za-z0-9_]/g, "").slice(0, 16);
 }
-export const isValidHandle = (h: string) => /^[A-Za-z0-9_]{3,16}$/.test(h);
+export const isValidHandle = (h: string) => /^[A-Za-z0-9_]{3,16}$/.test(h) && !isProfane(h);

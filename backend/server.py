@@ -12,6 +12,9 @@ from pydantic import BaseModel, BeforeValidator, Field, ConfigDict, field_valida
 from typing import Annotated, List, Optional
 import uuid
 from datetime import datetime, timedelta, timezone
+from fastapi.responses import HTMLResponse
+
+from moderation import is_profane
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -121,6 +124,8 @@ class DailyScoreIn(BaseModel):
     def _handle(cls, v: str) -> str:
         if not HANDLE_RE.match(v):
             raise ValueError("handle must be 3-16 letters, numbers or _")
+        if is_profane(v):
+            raise ValueError("handle not allowed")
         return v
 
     @field_validator("device_id")
@@ -229,7 +234,82 @@ async def daily_leaderboard(date: str, limit: int = Query(50, ge=1, le=100), dev
             s = DailyScore.from_mongo(mine)
             you = _entry(s, await _rank_of(date, s.score, s.seconds), device_id)
     total = await db.daily_scores.count_documents({"date": date})
+    _mask_all([*entries, you], await _hidden_handles([*entries, you]))
     return LeaderboardOut(date=date, total=total, entries=entries, you=you)
+
+
+# ---------------------------------------------------------------------------
+# Name safety: reports + masking. Handles that fail the filter, or are reported by
+# REPORT_THRESHOLD different devices, are shown as HIDDEN_HANDLE on every board.
+# ---------------------------------------------------------------------------
+HIDDEN_HANDLE = "HiddenPilot"
+REPORT_THRESHOLD = 3
+
+
+async def _hidden_handles(entries: list) -> set:
+    names = list({e.handle.lower() for e in entries if e})
+    rows = await db.handle_reports.aggregate([
+        {"$match": {"handle_lower": {"$in": names}}},
+        {"$group": {"_id": "$handle_lower", "n": {"$sum": 1}}},
+        {"$match": {"n": {"$gte": REPORT_THRESHOLD}}},
+    ]).to_list(None)
+    return {r["_id"] for r in rows}
+
+
+def _mask_all(entries: list, hidden: set) -> None:
+    for e in entries:
+        if e and (e.handle.lower() in hidden or is_profane(e.handle)):
+            e.handle = HIDDEN_HANDLE
+
+
+class ReportIn(BaseModel):
+    reporter_device_id: str
+    handle: str
+    board: str = Field(pattern=r"^(daily|weekly|bossrush)$")
+    reason: str = Field(pattern=r"^(offensive|impersonation|other)$")
+
+    @field_validator("reporter_device_id")
+    @classmethod
+    def _device(cls, v: str) -> str:
+        if not DEVICE_RE.match(v):
+            raise ValueError("invalid device id")
+        return v
+
+    @field_validator("handle")
+    @classmethod
+    def _reported(cls, v: str) -> str:
+        if not HANDLE_RE.match(v) or v.lower() == HIDDEN_HANDLE.lower():
+            raise ValueError("invalid handle")
+        return v
+
+
+class HandleReport(BaseDocument):
+    reporter_device_id: str
+    handle: str
+    handle_lower: str
+    board: str
+    reason: str
+    created_at: str
+
+
+@api_router.post("/reports")
+async def report_handle(body: ReportIn):
+    rec = HandleReport(handle_lower=body.handle.lower(), created_at=datetime.now(timezone.utc).isoformat(), **body.model_dump())
+    try:
+        await db.handle_reports.insert_one(rec.to_mongo())
+        duplicate = False
+    except DuplicateKeyError:  # one report per device per handle
+        duplicate = True
+    count = await db.handle_reports.count_documents({"handle_lower": rec.handle_lower})
+    return {"ok": True, "duplicate": duplicate, "hidden": count >= REPORT_THRESHOLD}
+
+
+PRIVACY_HTML = Path(__file__).parent / "static" / "privacy.html"
+
+
+@api_router.get("/privacy", response_class=HTMLResponse)
+async def privacy_policy():
+    return HTMLResponse(PRIVACY_HTML.read_text(encoding="utf-8"))
 
 
 # ---------------------------------------------------------------------------
@@ -288,6 +368,7 @@ async def weekly_leaderboard(week_start: str, limit: int = Query(50, ge=1, le=10
     entries = _weekly_entries(await _weekly_rows(start), dev)
     last = _weekly_entries(await _weekly_rows(start - timedelta(days=7), limit=3), dev)  # podium only
     you = next((e for e in entries if e.is_you), None)
+    _mask_all([*entries, *last], await _hidden_handles([*entries, *last]))
     return WeeklyOut(
         week_start=start.isoformat(), week_end=(start + timedelta(days=6)).isoformat(), total_players=len(entries),
         entries=entries[:limit], you=you, last_week_top=last,
@@ -394,6 +475,7 @@ async def bossrush_leaderboard(limit: int = Query(50, ge=1, le=100), device_id: 
         if mine:
             s = BossRushScore.from_mongo(mine)
             you = _rush_entry(s, await _rush_rank(s.ms), device_id)
+    _mask_all([*entries, you], await _hidden_handles([*entries, you]))
     return BossRushOut(total=await db.bossrush_scores.count_documents({}), entries=entries, you=you)
 
 
@@ -403,6 +485,8 @@ async def ensure_indexes():
     await db.daily_scores.create_index([("date", 1), ("score", -1), ("seconds", 1)])
     await db.bossrush_scores.create_index([("device_id", 1)], unique=True)
     await db.bossrush_scores.create_index([("ms", 1)])
+    await db.handle_reports.create_index([("reporter_device_id", 1), ("handle_lower", 1)], unique=True)
+    await db.handle_reports.create_index([("handle_lower", 1)])
 
 # Include the router in the main app
 app.include_router(api_router)
