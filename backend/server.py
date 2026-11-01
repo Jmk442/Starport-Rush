@@ -30,6 +30,14 @@ db = client[os.environ['DB_NAME']]
 # Create the main app without a prefix
 app = FastAPI()
 
+
+# Deployment health probes (plain and /api-prefixed). No DB call, so it answers as soon as the server is up.
+@app.get("/health")
+@app.get("/api/health")
+async def health():
+    return {"status": "ok"}
+
+
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
