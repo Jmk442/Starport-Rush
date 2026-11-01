@@ -1,11 +1,4 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import "@/index.css";
-import App from "@/App";
-
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
+// Thin entry. The Starport Rush game is the Expo web export of /app/mobile, copied into
+// public/ (public/index.html loads its bundles from /_expo/...). Rebuild it with
+// scripts/build-game.sh. Nothing is rendered from here, so the game owns #root.
+export {};
