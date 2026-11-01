@@ -79,3 +79,11 @@ User's words:
 "Home Button: Add a Home button to the victory screen so players can get back to the main menu"
 "Name Safety: Add a profanity filter and a Report button for player handles before launch"
 Notes: the privacy page must be reachable at a public URL on the deployed site (for App Store Connect) and linked in the app. Contact email: use a placeholder until the user supplies it. After the changes, rerun /app/frontend/scripts/build-game.sh so the web copy stays in sync.
+
+## Round 9
+User's words:
+"Hide Diagnostics: Hide the debug diagnostics panel in Settings before you submit to Apple"
+"Block Players: Let players block another player's name so they never see it again"
+"Champion Hat: Give the Weekly Cup winner a one-week Champion hat shown on every board and share card"
+"Cloud Save: Let progress follow a player across devices with a simple save code"
+Notes: no login or accounts (cloud save works with a save code only). Keep the App Store readiness settings from the last review intact. After the changes, rerun /app/frontend/scripts/build-game.sh so the web copy stays in sync.

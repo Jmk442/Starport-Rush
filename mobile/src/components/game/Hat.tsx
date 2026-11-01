@@ -77,6 +77,22 @@ export function Hat({ id, size }: { id: HatId; size: number }) {
           <View style={{ width: s * 0.62, height: s * 0.2, borderRadius: s, borderWidth: 2, borderColor: colors.yellow, shadowColor: colors.yellow, shadowOpacity: 0.9, shadowRadius: 4 }} />
         </View>
       );
+    case "champion":
+      return (
+        <View style={styles.wrap}>
+          <View style={[styles.dot, { width: s * 0.14, height: s * 0.14, backgroundColor: colors.cyan, marginBottom: -s * 0.04 }]} />
+          <View style={{ flexDirection: "row" }}>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <View key={i} style={[styles.tri, { borderLeftWidth: s * 0.07, borderRightWidth: s * 0.07, borderBottomWidth: s * (i % 2 ? 0.16 : 0.24), borderBottomColor: colors.yellow }]} />
+            ))}
+          </View>
+          <View style={{ width: s * 0.7, height: s * 0.14, backgroundColor: colors.yellow, borderBottomWidth: s * 0.04, borderBottomColor: colors.orange, flexDirection: "row", justifyContent: "space-evenly", alignItems: "center" }}>
+            {[colors.red, colors.cyan, colors.red].map((g, i) => (
+              <View key={i} style={[styles.dot, { width: s * 0.08, height: s * 0.08, backgroundColor: g }]} />
+            ))}
+          </View>
+        </View>
+      );
     default:
       return null;
   }

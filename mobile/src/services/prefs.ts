@@ -24,7 +24,7 @@ export interface Prefs {
 
 const MAX_LEVEL_STORED = 30;
 const BOSS_IDS = BOSS_LEVELS.map((b) => b.levelId); // Sector Boss stages
-const STAR_IDS = [...Array.from({ length: MAX_LEVEL_STORED }, (_, i) => i + 1), ...BOSS_IDS];
+export const STAR_IDS = [...Array.from({ length: MAX_LEVEL_STORED }, (_, i) => i + 1), ...BOSS_IDS];
 let prefs: Prefs = {
   loaded: false,
   music: true,
@@ -46,6 +46,17 @@ function set(patch: Partial<Prefs>) {
 
 export function getPrefs() {
   return prefs;
+}
+
+export function onPrefsChange(fn: () => void) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
+/** Re-read everything from storage (after a cloud-save restore). */
+export async function reloadPrefs() {
+  prefs = { ...prefs, loaded: false };
+  await loadPrefs();
 }
 
 export function usePrefs(): Prefs {

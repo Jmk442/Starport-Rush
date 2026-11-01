@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Query, Request
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -9,7 +9,10 @@ import re
 import logging
 from pathlib import Path
 from pydantic import BaseModel, BeforeValidator, Field, ConfigDict, field_validator
-from typing import Annotated, List, Optional
+from typing import Annotated, Dict, List, Optional, Union
+import json
+import secrets
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from fastapi.responses import HTMLResponse
@@ -145,6 +148,7 @@ class LeaderboardEntry(BaseModel):
     best_combo: int
     replay_code: Optional[str] = None
     is_you: bool = False
+    champion: bool = False  # last week's Weekly Cup winner
 
 
 class LeaderboardOut(BaseModel):
@@ -181,10 +185,10 @@ async def _rank_of(date: str, score: int, seconds: int) -> int:
     return better + 1
 
 
-def _entry(s: DailyScore, rank: int, device_id: Optional[str]) -> LeaderboardEntry:
+def _entry(s: DailyScore, rank: int, device_id: Optional[str], champs: frozenset = frozenset()) -> LeaderboardEntry:
     return LeaderboardEntry(
         rank=rank, handle=s.handle, score=s.score, seconds=s.seconds, undos=s.undos,
-        best_combo=s.best_combo, replay_code=s.replay_code, is_you=device_id == s.device_id,
+        best_combo=s.best_combo, replay_code=s.replay_code, is_you=device_id == s.device_id, champion=s.device_id in champs,
     )
 
 
@@ -226,13 +230,14 @@ async def daily_leaderboard(date: str, limit: int = Query(50, ge=1, le=100), dev
     _check_date(date, posting=False)
     cursor = db.daily_scores.find({"date": date}).sort([("score", -1), ("seconds", 1)]).limit(limit)
     docs = await cursor.to_list(limit)
-    entries = [_entry(DailyScore.from_mongo(d), i + 1, device_id) for i, d in enumerate(docs)]
+    champs = await _champion_devices()
+    entries = [_entry(DailyScore.from_mongo(d), i + 1, device_id, champs) for i, d in enumerate(docs)]
     you = None
     if device_id and DEVICE_RE.match(device_id):
         mine = await db.daily_scores.find_one({"date": date, "device_id": device_id})
         if mine:
             s = DailyScore.from_mongo(mine)
-            you = _entry(s, await _rank_of(date, s.score, s.seconds), device_id)
+            you = _entry(s, await _rank_of(date, s.score, s.seconds), device_id, champs)
     total = await db.daily_scores.count_documents({"date": date})
     _mask_all([*entries, you], await _hidden_handles([*entries, you]))
     return LeaderboardOut(date=date, total=total, entries=entries, you=you)
@@ -321,6 +326,7 @@ class WeeklyEntry(BaseModel):
     total: int
     days: int
     is_you: bool = False
+    champion: bool = False
 
 
 class WeeklyOut(BaseModel):
@@ -352,12 +358,12 @@ async def _weekly_rows(start, limit: Optional[int] = None) -> list:
     return await db.daily_scores.aggregate(pipeline).to_list(None)
 
 
-def _weekly_entries(rows: list, device_id: Optional[str]) -> List[WeeklyEntry]:
+def _weekly_entries(rows: list, device_id: Optional[str], champs: frozenset = frozenset()) -> List[WeeklyEntry]:
     out, rank, prev = [], 0, None
     for i, r in enumerate(rows):
         if r["total"] != prev:  # ties share a rank
             rank, prev = i + 1, r["total"]
-        out.append(WeeklyEntry(rank=rank, handle=r["handle"], total=r["total"], days=r["days"], is_you=r["_id"] == device_id))
+        out.append(WeeklyEntry(rank=rank, handle=r["handle"], total=r["total"], days=r["days"], is_you=r["_id"] == device_id, champion=r["_id"] in champs))
     return out
 
 
@@ -365,8 +371,9 @@ def _weekly_entries(rows: list, device_id: Optional[str]) -> List[WeeklyEntry]:
 async def weekly_leaderboard(week_start: str, limit: int = Query(50, ge=1, le=100), device_id: Optional[str] = None):
     start = _week_bounds(week_start)
     dev = device_id if device_id and DEVICE_RE.match(device_id) else None
-    entries = _weekly_entries(await _weekly_rows(start), dev)
-    last = _weekly_entries(await _weekly_rows(start - timedelta(days=7), limit=3), dev)  # podium only
+    champs = await _champion_devices(start)
+    entries = _weekly_entries(await _weekly_rows(start), dev, champs)
+    last = _weekly_entries(await _weekly_rows(start - timedelta(days=7), limit=3), dev, champs)  # podium only
     you = next((e for e in entries if e.is_you), None)
     _mask_all([*entries, *last], await _hidden_handles([*entries, *last]))
     return WeeklyOut(
@@ -412,6 +419,7 @@ class BossRushEntry(BaseModel):
     undos: int
     splits: List[int]
     is_you: bool = False
+    champion: bool = False
 
 
 class BossRushOut(BaseModel):
@@ -424,8 +432,10 @@ async def _rush_rank(ms: int) -> int:
     return await db.bossrush_scores.count_documents({"ms": {"$lt": ms}}) + 1
 
 
-def _rush_entry(s: BossRushScore, rank: int, device_id: Optional[str]) -> BossRushEntry:
-    return BossRushEntry(rank=rank, handle=s.handle, ms=s.ms, undos=s.undos, splits=s.splits, is_you=device_id == s.device_id)
+def _rush_entry(s: BossRushScore, rank: int, device_id: Optional[str], champs: frozenset = frozenset()) -> BossRushEntry:
+    return BossRushEntry(
+        rank=rank, handle=s.handle, ms=s.ms, undos=s.undos, splits=s.splits, is_you=device_id == s.device_id, champion=s.device_id in champs,
+    )
 
 
 @api_router.post("/bossrush/scores", response_model=BossRushEntry)
@@ -463,20 +473,137 @@ async def submit_bossrush(body: BossRushIn):
 @api_router.get("/bossrush/leaderboard", response_model=BossRushOut)
 async def bossrush_leaderboard(limit: int = Query(50, ge=1, le=100), device_id: Optional[str] = None):
     docs = await db.bossrush_scores.find({}).sort([("ms", 1), ("updated_at", 1)]).limit(limit).to_list(limit)
+    champs = await _champion_devices()
     entries = []
     for i, d in enumerate(docs):
         s = BossRushScore.from_mongo(d)
         # sorted by ms: rank = position of the first entry with the same time (ties share a rank)
         rank = entries[-1].rank if entries and entries[-1].ms == s.ms else i + 1
-        entries.append(_rush_entry(s, rank, device_id))
+        entries.append(_rush_entry(s, rank, device_id, champs))
     you = None
     if device_id and DEVICE_RE.match(device_id):
         mine = await db.bossrush_scores.find_one({"device_id": device_id})
         if mine:
             s = BossRushScore.from_mongo(mine)
-            you = _rush_entry(s, await _rush_rank(s.ms), device_id)
+            you = _rush_entry(s, await _rush_rank(s.ms), device_id, champs)
     _mask_all([*entries, you], await _hidden_handles([*entries, you]))
     return BossRushOut(total=await db.bossrush_scores.count_documents({}), entries=entries, you=you)
+
+
+# ---------------------------------------------------------------------------
+# Champion Hat: last week's Weekly Cup winner(s) wear it for the whole current week
+# ---------------------------------------------------------------------------
+def _current_week_start():
+    today = datetime.now(timezone.utc).date()
+    return today - timedelta(days=today.weekday())
+
+
+async def _champion_rows(week_start=None) -> list:
+    """Top row(s) of the week before `week_start` (ties all win)."""
+    start = week_start or _current_week_start()
+    rows = await _weekly_rows(start - timedelta(days=7))
+    return [r for r in rows if rows and r["total"] == rows[0]["total"]]
+
+
+async def _champion_devices(week_start=None) -> frozenset:
+    return frozenset(r["_id"] for r in await _champion_rows(week_start))
+
+
+@api_router.get("/champion")
+async def current_champion(device_id: Optional[str] = None):
+    start = _current_week_start()
+    rows = await _champion_rows(start)
+    champs = [WeeklyEntry(rank=1, handle=r["handle"], total=r["total"], days=r["days"], is_you=r["_id"] == device_id, champion=True) for r in rows]
+    _mask_all(champs, await _hidden_handles(champs))
+    return {
+        "week_start": start.isoformat(),
+        "expires": (start + timedelta(days=7)).isoformat(),
+        "champions": [c.model_dump() for c in champs],
+        "is_you": any(c.is_you for c in champs),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Cloud Save: no accounts. A device uploads its progress and gets a save code;
+# entering the code on another device restores it (and adopts the same device id,
+# so leaderboard entries follow the player).
+# ---------------------------------------------------------------------------
+SAVE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"  # no 0/O, 1/I/L
+SAVE_KEY_RE = re.compile(r"^sr_[A-Za-z0-9_-]{1,60}$")
+SaveValue = Union[str, int, float, bool, None]
+SAVE_LOOKUPS_PER_MIN = 30
+_SAVE_LOOKUPS: Dict[str, list] = {}  # client ip -> recent lookup times (in-memory, per process)
+
+
+class SaveIn(BaseModel):
+    device_id: str
+    data: Dict[str, SaveValue]
+
+    @field_validator("device_id")
+    @classmethod
+    def _device(cls, v: str) -> str:
+        if not DEVICE_RE.match(v):
+            raise ValueError("invalid device id")
+        return v
+
+    @field_validator("data")
+    @classmethod
+    def _data(cls, v: Dict[str, SaveValue]) -> Dict[str, SaveValue]:
+        if len(v) > 300 or not all(SAVE_KEY_RE.match(k) for k in v):
+            raise ValueError("invalid save data")
+        if len(json.dumps(v)) > 32_000:
+            raise ValueError("save data too large")
+        return v
+
+
+class CloudSave(BaseDocument):
+    code: str
+    device_id: str
+    data: Dict[str, SaveValue]
+    updated_at: str
+
+
+def _new_code() -> str:
+    return "".join(secrets.choice(SAVE_ALPHABET) for _ in range(8))
+
+
+def _norm_code(code: str) -> str:
+    return re.sub(r"[^A-Z0-9]", "", code.upper())
+
+
+@api_router.post("/saves")
+async def upload_save(body: SaveIn):
+    now = datetime.now(timezone.utc).isoformat()
+    existing = await db.cloud_saves.find_one({"device_id": body.device_id})
+    if existing:
+        await db.cloud_saves.update_one({"_id": existing["_id"]}, {"$set": {"data": body.data, "updated_at": now}})
+        return {"code": existing["code"], "updated_at": now}
+    for _ in range(5):
+        rec = CloudSave(code=_new_code(), device_id=body.device_id, data=body.data, updated_at=now)
+        try:
+            await db.cloud_saves.insert_one(rec.to_mongo())
+            return {"code": rec.code, "updated_at": now}
+        except DuplicateKeyError:  # code clash (or same device racing): retry / reuse
+            again = await db.cloud_saves.find_one({"device_id": body.device_id})
+            if again:
+                return {"code": again["code"], "updated_at": again["updated_at"]}
+    raise HTTPException(409, "please retry")
+
+
+@api_router.get("/saves/{code}")
+async def download_save(code: str, request: Request):
+    # slow down code guessing: a few lookups per minute per client
+    ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "?")).split(",")[0].strip()
+    now = time.monotonic()
+    hits = [t for t in _SAVE_LOOKUPS.get(ip, []) if now - t < 60]
+    if len(hits) >= SAVE_LOOKUPS_PER_MIN:
+        raise HTTPException(429, "too many attempts, try again in a minute")
+    _SAVE_LOOKUPS[ip] = [*hits, now]
+    doc = await db.cloud_saves.find_one({"code": _norm_code(code)})
+    if not doc:
+        raise HTTPException(404, "save code not found")
+    s = CloudSave.from_mongo(doc)
+    return {"code": s.code, "device_id": s.device_id, "data": s.data, "updated_at": s.updated_at}
 
 
 @app.on_event("startup")
@@ -487,6 +614,8 @@ async def ensure_indexes():
     await db.bossrush_scores.create_index([("ms", 1)])
     await db.handle_reports.create_index([("reporter_device_id", 1), ("handle_lower", 1)], unique=True)
     await db.handle_reports.create_index([("handle_lower", 1)])
+    await db.cloud_saves.create_index([("code", 1)], unique=True)
+    await db.cloud_saves.create_index([("device_id", 1)], unique=True)
 
 # Include the router in the main app
 app.include_router(api_router)

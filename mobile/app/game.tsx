@@ -31,6 +31,7 @@ import type { LevelDef } from "@/src/game/types";
 import { starsFor, useGameSession } from "@/src/game/useGameSession";
 import { COLOR_LABEL } from "@/src/game/visuals";
 import { setMusicPlaying, setMusicTrack } from "@/src/services/audio";
+import { useChampion } from "@/src/services/champion";
 import { saveLocal, saveRushLocal, syncDaily, syncRush } from "@/src/services/leaderboard";
 import { getPrefs, recordStars, usePrefs } from "@/src/services/prefs";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
@@ -60,6 +61,7 @@ function GameBody({ level, daily, rush }: { level: LevelDef; daily?: string; rus
   const [toast, setToast] = useState<string | null>(null);
   const [dailyInfo, setDailyInfo] = useState<{ score: number; best: boolean; sync: string } | null>(null);
   const prefs = usePrefs();
+  const champion = useChampion(prefs.deviceId);
   const sector = daily ? DAILY_SECTOR : sectorFor(level.levelId);
   const track = daily ? sector.music : musicFor(level.levelId);
   useEffect(() => setMusicTrack(track), [track]);
@@ -305,6 +307,7 @@ function GameBody({ level, daily, rush }: { level: LevelDef; daily?: string; rus
                   handle: prefs.handle,
                   hat: prefs.hat,
                   score: dailyInfo?.score,
+                  champion: champion?.is_you,
                 }),
             },
             ...(session.bestCombo >= 2 ? [{ id: "share-replay", label: `Share Combo ×${session.bestCombo} Replay`, onPress: shareReplay }] : []),

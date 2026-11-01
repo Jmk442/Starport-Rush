@@ -9,9 +9,11 @@ import { Starfield } from "@/src/components/Starfield";
 import { todayKey } from "@/src/game/daily";
 import { daysElapsed, formatCountdown, msUntilWeekEnd, weekEndKey, weekStartKey } from "@/src/game/weekly";
 import { fetchWeekly, syncDaily, type WeeklyBoard } from "@/src/services/leaderboard";
+import { BoardHandle, ChampionBadge } from "@/src/components/BoardHandle";
 import { ReportFlag, ReportSheet, shownHandle } from "@/src/components/ReportSheet";
 import { HIDDEN_HANDLE } from "@/src/game/profanity";
-import { useReportedHandles } from "@/src/services/reports";
+import { useChampion } from "@/src/services/champion";
+import { isBlocked, useBlockedHandles, useReportedHandles } from "@/src/services/reports";
 import { usePrefs } from "@/src/services/prefs";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
 
@@ -28,6 +30,10 @@ export default function WeeklyScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [left, setLeft] = useState(msUntilWeekEnd(week));
   const reported = useReportedHandles();
+  const blocked = useBlockedHandles();
+  const visible = (e: { handle: string; is_you: boolean }) => e.is_you || !isBlocked(blocked, e.handle);
+  const champion = useChampion(prefs.deviceId);
+  const champs = (champion?.champions ?? []).filter(visible);
   const [reportTarget, setReportTarget] = useState<string | null>(null);
 
   useEffect(() => {
@@ -81,22 +87,38 @@ export default function WeeklyScreen() {
         <Text style={styles.you} testID="weekly-your-total">
           {board?.you ? `#${board.you.rank} · ${board.you.total} pts this week` : "No points yet this week"}
         </Text>
+        {champs.length > 0 && (
+          <View style={styles.champRow} testID="weekly-champion-banner">
+            <ChampionBadge testID="weekly-champion-banner-badge" />
+            <Text style={styles.champText} numberOfLines={2}>
+              {champion?.is_you
+                ? "You won last week! You wear the Champion Hat until Sunday."
+                : `@${champs.map((c) => shownHandle(c.handle, reported)).join(", @")} won last week and wears the Champion Hat until Sunday.`}
+            </Text>
+          </View>
+        )}
         <Pressable testID="weekly-play-daily-button" onPress={() => router.dismissTo("/daily")} style={({ pressed }) => [styles.cta, pressed && styles.pressed]}>
           <Ionicons name="rocket" size={20} color={colors.onBrandPrimary} />
           <Text style={styles.ctaText}>Play today&apos;s daily</Text>
         </Pressable>
       </View>
 
-      {!!board?.last_week_top.length && (
+      {!!board?.last_week_top.filter(visible).length && (
         <View style={styles.last} testID="weekly-last-week">
           <Text style={styles.lastTitle}>Last week&apos;s podium</Text>
-          {board.last_week_top.map((e) => (
+          {board.last_week_top.filter(visible).map((e) => (
             <View key={`${e.rank}-${e.handle}`} style={styles.lastRow} testID={`weekly-last-${e.rank}`}>
               <Ionicons name="trophy" size={16} color={e.rank === 1 ? colors.yellow : colors.onSurfaceSecondary} />
-              <Text style={styles.lastHandle} numberOfLines={1}>
-                @{shownHandle(e.handle, reported)}
-                {e.is_you ? " (you)" : ""}
-              </Text>
+              <View style={styles.flex}>
+                <BoardHandle
+                  handle={e.handle}
+                  reported={reported}
+                  isYou={e.is_you}
+                  champion={e.champion}
+                  style={styles.lastHandle}
+                  testID={`weekly-last-champion-${e.rank}`}
+                />
+              </View>
               <Text style={styles.lastScore}>{e.total}</Text>
             </View>
           ))}
@@ -127,7 +149,7 @@ export default function WeeklyScreen() {
         <Text style={styles.topTitle}>Weekly Cup</Text>
       </View>
       <FlatList
-        data={board?.entries ?? []}
+        data={(board?.entries ?? []).filter(visible)}
         keyExtractor={(e, i) => `${i}-${e.rank}-${e.handle}`}
         ListHeaderComponent={header}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
@@ -137,10 +159,14 @@ export default function WeeklyScreen() {
           <View testID={`weekly-row-${index + 1}`} style={[styles.row, item.is_you && styles.rowYou]}>
             <Text style={[styles.rank, item.rank <= 3 && { color: colors.yellow }]}>#{item.rank}</Text>
             <View style={styles.flex}>
-              <Text style={styles.handle} numberOfLines={1}>
-                @{shownHandle(item.handle, reported)}
-                {item.is_you ? " (you)" : ""}
-              </Text>
+              <BoardHandle
+                handle={item.handle}
+                reported={reported}
+                isYou={item.is_you}
+                champion={item.champion}
+                style={styles.handle}
+                testID={`weekly-champion-${index + 1}`}
+              />
               <Text style={styles.meta}>
                 {item.days}/7 days played
               </Text>
@@ -171,13 +197,15 @@ const useStyles = makeStyles((c) => ({
   stat: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: c.surfaceTertiary, borderRadius: radius.pill, paddingHorizontal: 12, height: 32 },
   statText: { fontFamily: fonts.display, fontSize: 13, color: c.onSurface },
   you: { fontFamily: fonts.display, fontSize: 15, color: c.brandPrimary, marginTop: 12 },
+  champRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12, backgroundColor: c.surfaceTertiary, borderRadius: radius.md, padding: 12 },
+  champText: { flex: 1, fontFamily: fonts.text, fontSize: 13, lineHeight: 18, color: c.onSurface },
   cta: { height: 52, borderRadius: radius.pill, backgroundColor: c.brandPrimary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 16 },
   ctaText: { fontFamily: fonts.display, fontSize: 16, color: c.onBrandPrimary },
   pressed: { transform: [{ scale: 0.97 }] },
   last: { backgroundColor: c.surfaceSecondary, borderRadius: radius.md, padding: 12, marginTop: 16, gap: 8 },
   lastTitle: { fontFamily: fonts.display, fontSize: 14, color: c.onSurface },
   lastRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  lastHandle: { flex: 1, fontFamily: fonts.text, fontSize: 14, color: c.onSurfaceSecondary },
+  lastHandle: { fontFamily: fonts.text, fontSize: 14, color: c.onSurfaceSecondary },
   lastScore: { fontFamily: fonts.display, fontSize: 14, color: c.yellow },
   boardHead: { flexDirection: "row", alignItems: "baseline", marginTop: 24, marginBottom: 8 },
   section: { flex: 1, fontFamily: fonts.display, fontSize: 18, color: c.onSurface },

@@ -9,8 +9,9 @@ import { Starfield } from "@/src/components/Starfield";
 import { dailyLevel, todayKey } from "@/src/game/daily";
 import { HIDDEN_HANDLE } from "@/src/game/profanity";
 import { type DailyResult, fetchLeaderboard, getLocalBest, type Leaderboard, syncDaily } from "@/src/services/leaderboard";
+import { BoardHandle } from "@/src/components/BoardHandle";
 import { ReportFlag, ReportSheet, shownHandle } from "@/src/components/ReportSheet";
-import { useReportedHandles } from "@/src/services/reports";
+import { isBlocked, useBlockedHandles, useReportedHandles } from "@/src/services/reports";
 import { usePrefs } from "@/src/services/prefs";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
 
@@ -27,6 +28,8 @@ export default function DailyScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const level = dailyLevel(date);
   const reported = useReportedHandles();
+  const blocked = useBlockedHandles();
+  const visible = (e: { handle: string; is_you: boolean }) => e.is_you || !isBlocked(blocked, e.handle);
   const [reportTarget, setReportTarget] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -110,7 +113,7 @@ export default function DailyScreen() {
         <Text style={styles.topTitle}>Daily</Text>
       </View>
       <FlatList
-        data={board?.entries ?? []}
+        data={(board?.entries ?? []).filter(visible)}
         keyExtractor={(e, i) => `${i}-${e.rank}-${e.handle}`}
         ListHeaderComponent={header}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
@@ -120,10 +123,14 @@ export default function DailyScreen() {
           <View testID={`leaderboard-row-${index + 1}`} style={[styles.row, item.is_you && styles.rowYou]}>
             <Text style={[styles.rank, item.rank <= 3 && { color: colors.yellow }]}>#{item.rank}</Text>
             <View style={styles.flex}>
-              <Text style={styles.handle} numberOfLines={1}>
-                @{shownHandle(item.handle, reported)}
-                {item.is_you ? " (you)" : ""}
-              </Text>
+              <BoardHandle
+                handle={item.handle}
+                reported={reported}
+                isYou={item.is_you}
+                champion={item.champion}
+                style={styles.handle}
+                testID={`leaderboard-champion-${index + 1}`}
+              />
               <Text style={styles.meta}>
                 {item.seconds}s · {item.undos} undo{item.undos === 1 ? "" : "s"}
                 {item.best_combo >= 2 ? ` · combo ×${item.best_combo}` : ""}

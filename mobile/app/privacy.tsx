@@ -16,25 +16,29 @@ const SECTIONS: { title: string; body: string[] }[] = [
     body: [
       "Your game progress, stars, unlocked cosmetics and settings (music, sound, haptics).",
       "Your pilot handle and a random device ID created by the app (not linked to your name, Apple ID or advertising ID).",
-      "Your best Daily Challenge and Boss Rush results, and handles you have reported.",
+      "Your best Daily Challenge and Boss Rush results, and handles you have reported or blocked.",
     ],
   },
   {
     title: "What we send to our server",
     body: [
-      "Only when you play the Daily Challenge or Boss Rush, or report a handle.",
+      "Only when you play the Daily Challenge or Boss Rush, report a handle, or create a cloud save code.",
       "Leaderboard scores: your handle, the random device ID, your score or time, moves, undos, best combo and an optional replay code of your moves.",
       "Reports: the reported handle, the reason you chose, which leaderboard it was on and your random device ID (so one device can report a handle only once).",
-      "Your handle and scores are shown publicly on the in-game leaderboards (Daily, Weekly Cup and Boss Rush). Please don't use your real name or personal information as your handle.",
+      "Cloud save (only if you tap Create save code): your stars, handle, hats and trails, sound settings, Boss Rush best, reported and blocked handles and the random device ID, stored under your save code. Anyone with the code can restore that progress, so keep it private.",
+      "Your handle and scores are shown publicly on the in-game leaderboards (Daily, Weekly Cup and Boss Rush). Last week's Weekly Cup winner is shown with a Champion Hat. Please don't use your real name or personal information as your handle.",
     ],
   },
   {
     title: "Name safety",
-    body: ["Handles are checked against a profanity filter. Any player can report a handle; handles reported by several players are hidden from leaderboards and reviewed."],
+    body: [
+      "Handles are checked against a profanity filter. Any player can report a handle; handles reported by several players are hidden from leaderboards and reviewed.",
+      "You can block a player: their name is hidden from every leaderboard on your device. Blocking stays on your device and the other player is not told.",
+    ],
   },
   {
     title: "How long we keep data",
-    body: ["Leaderboard entries and reports are kept while the leaderboards are running. You can ask us to delete your entries at any time (see Contact)."],
+    body: ["Leaderboard entries, reports and cloud saves are kept while the game's online features are running. You can ask us to delete your entries or your cloud save at any time (see Contact)."],
   },
   {
     title: "Children",
@@ -44,7 +48,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
     title: "Your choices",
     body: [
       "Keep the random handle or change it in Settings.",
-      "Skip the Daily Challenge and Boss Rush to never send any data.",
+      "Skip the Daily Challenge, Boss Rush and cloud save to never send any data.",
       "Deleting the app removes all data stored on your device.",
     ],
   },

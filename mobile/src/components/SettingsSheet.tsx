@@ -6,6 +6,8 @@ import { Modal, Platform, Pressable, ScrollView, Switch, Text, TextInput, View }
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { BlockedSection } from "@/src/components/BlockedSection";
+import { CloudSaveSection } from "@/src/components/CloudSaveSection";
 import { isValidHandle, randomHandle, sanitizeHandle } from "@/src/game/cosmetics";
 import { musicStatus } from "@/src/services/audio";
 import { DIAG_KEYS, resetProgress, setHandle, setToggle, usePrefs } from "@/src/services/prefs";
@@ -29,8 +31,8 @@ export function SettingsSheet({ visible, onClose }: { visible: boolean; onClose:
     if (visible) setDraft(prefs.handle);
   }, [visible, prefs.handle]);
   useEffect(() => {
-    if (!visible) return;
-    const id = setInterval(() => tick((n) => n + 1), 1000); // live music status
+    if (!visible || !__DEV__) return;
+    const id = setInterval(() => tick((n) => n + 1), 1000); // live music status (dev-only panel)
     return () => clearInterval(id);
   }, [visible]);
   const valid = isValidHandle(draft);
@@ -89,19 +91,25 @@ export function SettingsSheet({ visible, onClose }: { visible: boolean; onClose:
             />
           </View>
         ))}
-        <Text style={styles.section}>On-device diagnostics</Text>
-        <Text style={styles.note}>Counters stay on this device. Nothing is sent anywhere.</Text>
-        <Text style={styles.note} testID="settings-music-status">
-          Music player: {musicStatus()}
-        </Text>
-        <View style={styles.diagGrid} testID="settings-diagnostics">
-          {DIAG_KEYS.map((k) => (
-            <View key={k} style={styles.diagCell}>
-              <Text style={styles.diagNum}>{prefs.diag[k]}</Text>
-              <Text style={styles.diagLabel}>{k}</Text>
+        <CloudSaveSection />
+        <BlockedSection />
+        {__DEV__ && (
+          <>
+            <Text style={styles.section}>On-device diagnostics</Text>
+            <Text style={styles.note}>Counters stay on this device. Nothing is sent anywhere.</Text>
+            <Text style={styles.note} testID="settings-music-status">
+              Music player: {musicStatus()}
+            </Text>
+            <View style={styles.diagGrid} testID="settings-diagnostics">
+              {DIAG_KEYS.map((k) => (
+                <View key={k} style={styles.diagCell}>
+                  <Text style={styles.diagNum}>{prefs.diag[k]}</Text>
+                  <Text style={styles.diagLabel}>{k}</Text>
+                </View>
+              ))}
             </View>
-          ))}
-        </View>
+          </>
+        )}
         <View style={styles.actions}>
           <Pressable
             testID="settings-privacy-button"

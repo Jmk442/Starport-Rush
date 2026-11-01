@@ -22,13 +22,14 @@ export interface ShareData {
   handle: string;
   hat: HatId;
   score?: number; // daily challenge points
+  champion?: boolean; // wearing the Weekly Cup Champion hat this week
 }
 
 const CREW: AlienColor[] = ["cyan", "pink", "yellow", "green", "purple"];
 
 export function shareText(d: ShareData) {
   const stars = "★".repeat(d.stars) + "☆".repeat(3 - d.stars);
-  return `@${d.handle} cleared STARPORT RUSH · ${d.levelId >= 100 ? d.levelName : `Level ${d.levelId} "${d.levelName}"`}${d.score ? ` · ${d.score} pts` : ""}\nCleared in ${d.moves} moves ${stars}${d.bestCombo >= 2 ? ` · combo ×${d.bestCombo}` : ""} · ${d.seconds}s\nCan you launch faster? 🚀`;
+  return `@${d.handle} cleared STARPORT RUSH · ${d.levelId >= 100 ? d.levelName : `Level ${d.levelId} "${d.levelName}"`}${d.score ? ` · ${d.score} pts` : ""}\nCleared in ${d.moves} moves ${stars}${d.bestCombo >= 2 ? ` · combo ×${d.bestCombo}` : ""} · ${d.seconds}s${d.champion ? "\n👑 Weekly Cup Champion" : ""}\nCan you launch faster? 🚀`;
 }
 
 export function ShareCardModal({ data, onClose }: { data: ShareData | null; onClose: () => void }) {
@@ -74,10 +75,16 @@ export function ShareCardModal({ data, onClose }: { data: ShareData | null; onCl
             <View style={styles.crew}>
               {CREW.map((c, i) => (
                 <View key={c} style={{ transform: [{ translateY: i % 2 ? -6 : 0 }, { rotate: `${(i - 2) * 6}deg` }] }}>
-                  <AlienFace color={c} size={34} mood="party" variant={i} hat={data.hat} />
+                  <AlienFace color={c} size={34} mood="party" variant={i} hat={data.champion ? "champion" : data.hat} />
                 </View>
               ))}
             </View>
+            {data.champion && (
+              <View style={styles.champ} testID="share-card-champion">
+                <Ionicons name="trophy" size={14} color={colors.onBrandPrimary} />
+                <Text style={styles.champText}>WEEKLY CUP CHAMPION</Text>
+              </View>
+            )}
             <Text style={styles.handle} testID="share-card-handle">
               @{data.handle}
             </Text>
@@ -136,6 +143,8 @@ const useStyles = makeStyles((c) => ({
   level: { fontFamily: fonts.display, fontSize: 11, color: c.brandPrimary, letterSpacing: 2, marginTop: 4 },
   crew: { flexDirection: "row", gap: 6, marginTop: 24, marginBottom: 16, alignItems: "flex-end" },
   handle: { fontFamily: fonts.display, fontSize: 16, color: c.yellow, marginBottom: 4 },
+  champ: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: c.yellow, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 4, marginBottom: 8 },
+  champText: { fontFamily: fonts.display, fontSize: 11, letterSpacing: 1.5, color: c.onBrandPrimary },
   cleared: { fontFamily: fonts.display, fontSize: 26, color: c.onSurface },
   stars: { flexDirection: "row", gap: 6, marginTop: 8 },
   statsRow: { flexDirection: "row", gap: 12, marginTop: 16, alignSelf: "stretch" },

@@ -9,9 +9,10 @@ import { Starfield } from "@/src/components/Starfield";
 import { formatMs, isRushUnlocked, RUSH_BOSSES, startRush, UNDO_PENALTY_MS } from "@/src/game/bossRush";
 import { getLevel } from "@/src/game/levels";
 import { fetchRushBoard, getRushBest, type RushBoard, type RushResult, syncRush } from "@/src/services/leaderboard";
+import { BoardHandle } from "@/src/components/BoardHandle";
 import { ReportFlag, ReportSheet, shownHandle } from "@/src/components/ReportSheet";
 import { HIDDEN_HANDLE } from "@/src/game/profanity";
-import { useReportedHandles } from "@/src/services/reports";
+import { isBlocked, useBlockedHandles, useReportedHandles } from "@/src/services/reports";
 import { usePrefs } from "@/src/services/prefs";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
 
@@ -27,6 +28,8 @@ export default function BossRushScreen() {
   const [state, setState] = useState<"loading" | "ok" | "offline">("loading");
   const [refreshing, setRefreshing] = useState(false);
   const reported = useReportedHandles();
+  const blocked = useBlockedHandles();
+  const visible = (e: { handle: string; is_you: boolean }) => e.is_you || !isBlocked(blocked, e.handle);
   const [reportTarget, setReportTarget] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -122,7 +125,7 @@ export default function BossRushScreen() {
         <Text style={styles.topTitle}>Boss Rush</Text>
       </View>
       <FlatList
-        data={board?.entries ?? []}
+        data={(board?.entries ?? []).filter(visible)}
         keyExtractor={(e, i) => `${i}-${e.rank}-${e.handle}`}
         ListHeaderComponent={header}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
@@ -132,10 +135,14 @@ export default function BossRushScreen() {
           <View testID={`rush-row-${index + 1}`} style={[styles.row, item.is_you && styles.rowYou]}>
             <Text style={[styles.rank, item.rank <= 3 && { color: colors.yellow }]}>#{item.rank}</Text>
             <View style={styles.flex}>
-              <Text style={styles.handle} numberOfLines={1}>
-                @{shownHandle(item.handle, reported)}
-                {item.is_you ? " (you)" : ""}
-              </Text>
+              <BoardHandle
+                handle={item.handle}
+                reported={reported}
+                isYou={item.is_you}
+                champion={item.champion}
+                style={styles.handle}
+                testID={`rush-champion-${index + 1}`}
+              />
               <Text style={styles.meta} numberOfLines={1}>
                 {item.splits.map(formatMs).join(" · ")}
                 {item.undos ? ` · ${item.undos} undo${item.undos > 1 ? "s" : ""}` : ""}

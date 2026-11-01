@@ -1,7 +1,7 @@
 // Unlockable cosmetics, earned by total stars (max 15 levels x 3 = 45).
 import { isProfane } from "./profanity";
 
-export type HatId = "none" | "party" | "propeller" | "tophat" | "cone" | "crown" | "chef" | "viking" | "halo" | "fishbowl";
+export type HatId = "none" | "party" | "propeller" | "tophat" | "cone" | "crown" | "chef" | "viking" | "halo" | "fishbowl" | "champion"; // champion: Weekly Cup winner only
 export type TrailId = "none" | "sparkle" | "bubbles" | "hearts" | "rainbow" | "lightning" | "confetti" | "flame";
 
 export interface Cosmetic<T extends string> {

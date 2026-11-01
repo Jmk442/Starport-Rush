@@ -1,0 +1,38 @@
+{
+  "summary": "Round 9 tested in full: diagnostics are hidden in the production build, and Block Players, Champion Hat, Cloud Save and the privacy updates all work. Backend: the existing 76 tests pass, plus 4 new tests in test_round9_extra.py that cover champion ties, the champion flag on daily/weekly/bossrush, cloud save scalar round-trips, code normalisation and validation. UI was tested on the Metro preview and the production export at a 390x844 viewport. Seeded champion + blocked-player data was cleaned up afterwards.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "tests/test_round9.py::test_champion_is_last_weeks_winner", "issue": "Flaky under xdist: it seeds a 10M last-week score and asserts it is the only champion. Any other test running in parallel that seeds a higher last-week score (e.g. test_round9_extra, 20M) takes the title. Each file passes when run on its own."},
+      {"endpoint": "GET /api/saves/{code}", "issue": "Nothing stops someone from guessing save codes (8 chars from a 31-symbol alphabet, about 8.5e11 combinations). A restored code also hands over the device_id, which means taking over that player's leaderboard identity. Consider rate limiting."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Cloud save auto-sync", "issue": "Auto re-upload only fires on changes to stars, hat, trail or handle. Blocking or unblocking a player, or reporting one, does not re-upload, so these lists only sync on the next star or cosmetic change or a manual Save now.", "affected_testIDs": ["blocked-unblock-<handle>", "report-block-button"]}
+    ],
+    "design_issues": [
+      {"screen": "Settings > Blocked players", "issues": ["Blocked names show lowercased (@zzblockme instead of @ZzBlockMe)", "The Unblock button is 36px tall, below the 44px minimum touch target"]},
+      {"screen": "Weekly", "issues": ["If every podium entry is blocked, the 'Last week's podium' card still shows its title with no rows"]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_round9.py", "/app/backend/tests/test_round9_extra.py", "/app/backend/tests/seed_r9_ui.py"],
+  "action_items": [
+    "Make test_round9.py's champion test robust to parallel seeding: use a unique very large score, or assert the handle is among the champions",
+    "Optionally re-upload the cloud save when the blocked or reported lists change",
+    "Show blocked handles in their original case; make the Unblock button at least 44px tall",
+    "Optional: rate-limit GET /api/saves/{code}"
+  ],
+  "critical_code_review_comments": [
+    "Daily and bossrush champion flags always use the current week's champion, whichever date is viewed. This is fine for the current board, but older daily boards will show this week's champion.",
+    "Restoring on a device that already has its own device id silently orphans that device's own leaderboard entries. This is by design but not mentioned in the restore confirm text."
+  ],
+  "updated_files": ["/app/backend/tests/test_round9_extra.py (new)", "/app/backend/tests/seed_r9_ui.py (new)"],
+  "success_rate": {"backend": "100% (80/80 when files run without champion seeding races; 1 flaky in parallel)", "frontend": "100% of requested flows"},
+  "seed_data_creation": "seed_r9_ui.py seeds test-ui9-* daily/bossrush scores, a last-week champion and a block target; 'python seed_r9_ui.py clean' removes them. All cleaned; 6 real daily scores remain. Also removed the leftover cloud_save for test-cs-a1.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Today in the container is 2026-11-01 (Sun); current week 2026-10-26, last Monday 2026-10-19. Seed the champion with seed_r9_ui.py (device test-ui9-champ0001 / ZzChampion; block target test-ui9-block0001 / ZzBlockMe), then set localStorage sr_device=JSON string. Production export is served at the EXPO_PUBLIC_BACKEND_URL root. Level 1 solution: ship-cyan-01, ship-yellow-01, ship-pink-01. Level 2 jam: cyan-02, green-01, pink-01, cyan-01."
+}

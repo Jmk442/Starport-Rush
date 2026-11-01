@@ -23,6 +23,7 @@ export interface LeaderEntry {
   best_combo: number;
   replay_code: string | null;
   is_you: boolean;
+  champion?: boolean;
 }
 
 export interface Leaderboard {
@@ -116,6 +117,7 @@ export interface WeeklyEntry {
   total: number;
   days: number;
   is_you: boolean;
+  champion?: boolean;
 }
 export interface WeeklyBoard {
   week_start: string;
@@ -139,6 +141,7 @@ export interface RushEntry extends RushResult {
   rank: number;
   handle: string;
   is_you: boolean;
+  champion?: boolean;
 }
 export interface RushBoard {
   total: number;

@@ -82,3 +82,10 @@ Expo app requirement: /app/memory/product/requirements.md (+ full_spec.md). Prem
 - Home button on victory screens (Boss Rush: "Home (ends run)").
 - Tests: backend 73 passed, engine 112 passed, daily/replay passed; testing agent iteration 11 passed.
 - Backlog: harder-to-fake report identity/rate limits; confirm the policy "Last updated" date before store submission.
+
+## Round 9 (Nov 2026) — Hide Diagnostics, Block Players, Champion Hat, Cloud Save
+- Diagnostics panel in Settings now shows only in dev builds (__DEV__); production/App Store builds hide it.
+- Block: "Block @x" in the report sheet; blocked names are hidden on every board on this device; Settings > Blocked players to unblock.
+- Champion Hat: last week's Weekly Cup winner(s) get a crown badge on Daily/Weekly/Boss Rush boards, a Weekly banner, and a champion ribbon + crown hats on their share card (GET /api/champion; `champion` flag on entries).
+- Cloud Save (no accounts): Settings > Cloud save creates an 8-char code (POST /api/saves), auto re-uploads on progress changes; restore with a code (GET /api/saves/{code}, rate-limited) merges stars and adopts the saved device id.
+- Privacy policy updated (app + /api/privacy). Tests: backend all pass, engine 112, daily/replay pass; testing agent iteration 12 passed, its minor issues fixed.

@@ -16,6 +16,7 @@ import { getLevel, LEVELS } from "@/src/game/levels";
 import { decodeReplay, findReplayCode } from "@/src/game/replay";
 import { SECTORS } from "@/src/game/sectors";
 import { setMusicPlaying } from "@/src/services/audio";
+import { startCloudAutoSync } from "@/src/services/cloudSave";
 import { usePrefs } from "@/src/services/prefs";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
 
@@ -45,6 +46,9 @@ export default function Home() {
     router.push({ pathname: "/replay", params: { code: found } });
   };
   useFocusEffect(useCallback(() => setMusicPlaying(false), []));
+  useEffect(() => {
+    if (prefs.loaded) startCloudAutoSync();
+  }, [prefs.loaded]);
 
   return (
     <View style={styles.root} testID="home-screen">

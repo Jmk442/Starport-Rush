@@ -5,7 +5,7 @@ import { Modal, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HIDDEN_HANDLE } from "@/src/game/profanity";
-import { type ReportBoard, type ReportReason, reportHandle } from "@/src/services/reports";
+import { blockHandle, type ReportBoard, type ReportReason, reportHandle } from "@/src/services/reports";
 import { fonts, makeStyles, radius, useTheme } from "@/src/theme";
 
 const REASONS: { id: ReportReason; label: string }[] = [
@@ -21,7 +21,7 @@ export function ReportFlag({ testID, onPress }: { testID: string; onPress: () =>
   const styles = useStyles();
   const { colors } = useTheme();
   return (
-    <Pressable testID={testID} hitSlop={8} onPress={onPress} accessibilityLabel="Report this name" style={({ pressed }) => [styles.flag, pressed && styles.pressed]}>
+    <Pressable testID={testID} hitSlop={8} onPress={onPress} accessibilityLabel="Report or block this name" style={({ pressed }) => [styles.flag, pressed && styles.pressed]}>
       <Ionicons name="flag-outline" size={14} color={colors.muted} />
     </Pressable>
   );
@@ -32,7 +32,7 @@ export function ReportSheet({ target, board, onClose }: { target: string | null;
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [reason, setReason] = useState<ReportReason>("offensive");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "offline">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "offline" | "blocked">("idle");
   const close = () => {
     setStatus("idle");
     setReason("offensive");
@@ -43,14 +43,23 @@ export function ReportSheet({ target, board, onClose }: { target: string | null;
     setStatus("sending");
     setStatus(await reportHandle(target, board, reason));
   };
-  const done = status === "sent" || status === "offline";
+  const block = async () => {
+    if (!target) return;
+    await blockHandle(target);
+    setStatus("blocked");
+  };
+  const done = status === "sent" || status === "offline" || status === "blocked";
   return (
     <Modal visible={!!target} transparent animationType="slide" onRequestClose={close}>
       <Pressable testID="report-backdrop" style={styles.backdrop} onPress={close} />
       <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]} testID="report-sheet">
         <View style={styles.grabber} />
-        <Text style={styles.title}>{done ? "Thanks for reporting" : `Report @${target}?`}</Text>
-        {done ? (
+        <Text style={styles.title}>{status === "blocked" ? `@${target} blocked` : done ? "Thanks for reporting" : `Report or block @${target}?`}</Text>
+        {status === "blocked" ? (
+          <Text style={styles.note} testID="report-blocked-message">
+            {`You won't see @${target} on any leaderboard again. You can unblock them in Settings.`}
+          </Text>
+        ) : done ? (
           <Text style={styles.note} testID="report-done-message">
             {`@${target} is now hidden on your leaderboards. Names reported by several players are hidden for everyone and reviewed.`}
             {status === "offline" ? " You're offline, so the report will need another try later." : ""}
@@ -71,6 +80,10 @@ export function ReportSheet({ target, board, onClose }: { target: string | null;
                 </Pressable>
               ))}
             </View>
+            <Pressable testID="report-block-button" onPress={block} style={({ pressed }) => [styles.blockBtn, pressed && styles.pressed]}>
+              <Ionicons name="ban" size={18} color={colors.error} />
+              <Text style={[styles.btnText, { color: colors.error }]}>Block @{target}</Text>
+            </Pressable>
           </>
         )}
         <View style={styles.actions}>
@@ -105,6 +118,7 @@ const useStyles = makeStyles((c) => ({
   reason: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 48, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, paddingHorizontal: 12 },
   reasonText: { fontFamily: fonts.text, fontSize: 15, color: c.onSurface },
   actions: { flexDirection: "row", gap: 12, marginTop: 24 },
+  blockBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 48, marginTop: 12, borderRadius: radius.pill, borderWidth: 1, borderColor: c.error },
   btn: { flex: 1, height: 48, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   primary: { backgroundColor: c.brandPrimary },
   secondary: { backgroundColor: c.surfaceTertiary },
