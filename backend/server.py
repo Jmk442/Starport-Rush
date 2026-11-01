@@ -270,7 +270,7 @@ def _week_bounds(week_start: str):
     return d
 
 
-async def _weekly_rows(start) -> list:
+async def _weekly_rows(start, limit: Optional[int] = None) -> list:
     days = [(start + timedelta(days=i)).isoformat() for i in range(7)]
     pipeline = [
         {"$match": {"date": {"$in": days}}},
@@ -278,6 +278,8 @@ async def _weekly_rows(start) -> list:
         {"$group": {"_id": "$device_id", "handle": {"$first": "$handle"}, "total": {"$sum": "$score"}, "days": {"$sum": 1}}},
         {"$sort": {"total": -1, "days": 1, "handle": 1}},
     ]
+    if limit:
+        pipeline.append({"$limit": limit})
     return await db.daily_scores.aggregate(pipeline).to_list(None)
 
 
@@ -295,7 +297,7 @@ async def weekly_leaderboard(week_start: str, limit: int = Query(50, ge=1, le=10
     start = _week_bounds(week_start)
     dev = device_id if device_id and DEVICE_RE.match(device_id) else None
     entries = _weekly_entries(await _weekly_rows(start), dev)
-    last = _weekly_entries(await _weekly_rows(start - timedelta(days=7)), dev)[:3]
+    last = _weekly_entries(await _weekly_rows(start - timedelta(days=7), limit=3), dev)  # podium only
     you = next((e for e in entries if e.is_you), None)
     return WeeklyOut(
         week_start=start.isoformat(), week_end=(start + timedelta(days=6)).isoformat(), total_players=len(entries),
