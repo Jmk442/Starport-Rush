@@ -11,6 +11,17 @@ const config = {
   enableHealthCheck: process.env.ENABLE_HEALTH_CHECK === "true",
 };
 
+// Maps react-scripts' v4 `https` option to the v5 `server` option.
+function toServerOption(https) {
+  if (typeof https === "object") {
+    return { type: "https", options: https };
+  }
+  if (https) {
+    return "https";
+  }
+  return "http";
+}
+
 // react-scripts@5 emits webpack-dev-server v4 options; strip/translate them for v5.
 function makeDevServerV5Compatible(devServerConfig) {
   const {
@@ -22,12 +33,7 @@ function makeDevServerV5Compatible(devServerConfig) {
     ...compatibleConfig
   } = devServerConfig;
 
-  compatibleConfig.server =
-    typeof https === "object"
-      ? { type: "https", options: https }
-      : https
-        ? "https"
-        : "http";
+  compatibleConfig.server = toServerOption(https);
   compatibleConfig.headers = {
     ...compatibleConfig.headers,
     "Cross-Origin-Resource-Policy": "same-origin",

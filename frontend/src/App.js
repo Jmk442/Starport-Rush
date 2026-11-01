@@ -7,16 +7,16 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
-
   useEffect(() => {
+    // defined inside the effect so the dependency list is complete
+    const helloWorldApi = async () => {
+      try {
+        const response = await axios.get(`${API}/`);
+        console.log(response.data.message);
+      } catch (e) {
+        console.error(e, `errored out requesting / api`);
+      }
+    };
     helloWorldApi();
   }, []);
 

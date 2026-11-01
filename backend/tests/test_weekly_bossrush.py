@@ -21,15 +21,21 @@ mc = MongoClient(os.environ["MONGO_URL"])
 db = mc[os.environ["DB_NAME"]]
 
 
-def dev():
-    return f"test-{uuid.uuid4().hex[:12]}"
+# One device prefix per test class: xdist (--dist loadscope) may run TestWeekly and
+# TestBossRush on different workers, so each class only cleans up its own records.
+WK, BR = "test-wk-", "test-br-"
 
 
-@pytest.fixture(scope="module", autouse=True)
-def cleanup():
+def dev(prefix):
+    return f"{prefix}{uuid.uuid4().hex[:12]}"
+
+
+@pytest.fixture(scope="class", autouse=True)
+def cleanup(request):
     yield
-    db.daily_scores.delete_many({"device_id": {"$regex": "^test-"}})
-    db.bossrush_scores.delete_many({"device_id": {"$regex": "^test-"}})
+    prefix = request.cls.PREFIX
+    db.daily_scores.delete_many({"device_id": {"$regex": f"^{prefix}"}})
+    db.bossrush_scores.delete_many({"device_id": {"$regex": f"^{prefix}"}})
 
 
 @pytest.fixture
@@ -47,6 +53,8 @@ def seed_daily(device, handle, date, score, seconds=60):
 
 # ---- Weekly Cup ----
 class TestWeekly:
+    PREFIX = WK
+
     def test_shape_and_bounds(self, s):
         r = s.get(f"{BASE_URL}/api/weekly/{MONDAY.isoformat()}/leaderboard")
         assert r.status_code == 200, r.text
@@ -67,44 +75,56 @@ class TestWeekly:
         if bad != "abc":
             assert r.status_code == 400
 
-    def test_totals_days_ties_you(self, s):
-        a, b, c = dev(), dev(), dev()
-        # a: 3 days (Mon, Tue + today via POST) ; b: tie total with a on 2 days; c: last week only
+    def _seed_week(self, s, a, b, c):
+        """a: Mon+Tue seeded + today via POST (prev Sunday must not count); b ties a on 2 days; c: last week only."""
         seed_daily(a, "TEST_wa", MONDAY.isoformat(), 2400)
         seed_daily(a, "TEST_wa", (MONDAY + timedelta(days=1)).isoformat(), 2300)
-        seed_daily(a, "TEST_wa", (MONDAY - timedelta(days=1)).isoformat(), 2500)  # previous Sunday - must not count
+        seed_daily(a, "TEST_wa", (MONDAY - timedelta(days=1)).isoformat(), 2500)
         r = s.post(f"{BASE_URL}/api/daily/{TODAY}/scores", json={"device_id": a, "handle": "TEST_wa", "score": 2200,
                    "seconds": 30, "undos": 0, "best_combo": 2, "moves": 8})
         assert r.status_code == 200, r.text
-        a_total = 2400 + 2300 + 2200 if MONDAY.isoformat() != TODAY and (MONDAY + timedelta(days=1)).isoformat() != TODAY else None
-        if a_total is None:
-            pytest.skip("today collides with seeded Mon/Tue")
+        a_total = 2400 + 2300 + 2200
         seed_daily(b, "TEST_wb", MONDAY.isoformat(), 2450)
         seed_daily(b, "TEST_wb", (MONDAY + timedelta(days=2)).isoformat(), a_total - 2450)
         seed_daily(c, "TEST_wc", LAST_MONDAY.isoformat(), 2499)
         seed_daily(c, "TEST_wc", (LAST_MONDAY + timedelta(days=3)).isoformat(), 2499)
+        return a_total
+
+    @staticmethod
+    def _one(entries, handle):
+        found = [e for e in entries if e["handle"] == handle]
+        assert len(found) == 1, f"{handle}: {found}"
+        return found[0]
+
+    def test_totals_days_ties_you(self, s):
+        if TODAY in (MONDAY.isoformat(), (MONDAY + timedelta(days=1)).isoformat()):
+            pytest.skip("today collides with seeded Mon/Tue")
+        a, b, c = dev(WK), dev(WK), dev(WK)
+        a_total = self._seed_week(s, a, b, c)
         r = s.get(f"{BASE_URL}/api/weekly/{MONDAY.isoformat()}/leaderboard", params={"device_id": a, "limit": 100})
         assert r.status_code == 200
         d = r.json()
-        ea = [e for e in d["entries"] if e["handle"] == "TEST_wa"]
-        eb = [e for e in d["entries"] if e["handle"] == "TEST_wb"]
-        assert len(ea) == 1 and len(eb) == 1
-        assert ea[0]["total"] == a_total and ea[0]["days"] == 3 and ea[0]["is_you"] is True
-        assert eb[0]["total"] == a_total and eb[0]["days"] == 2 and eb[0]["is_you"] is False
-        assert ea[0]["rank"] == eb[0]["rank"], "ties should share rank"
-        assert d["you"]["handle"] == "TEST_wa" and d["you"]["total"] == a_total
-        assert not any(e["handle"] == "TEST_wc" for e in d["entries"])
-        # ranks are non-decreasing and totals descending
+        ea, eb = self._one(d["entries"], "TEST_wa"), self._one(d["entries"], "TEST_wb")
+        assert (ea["total"], ea["days"], ea["is_you"]) == (a_total, 3, True)
+        assert (eb["total"], eb["days"], eb["is_you"]) == (a_total, 2, False)
+        assert ea["rank"] == eb["rank"], "ties should share rank"
+        assert (d["you"]["handle"], d["you"]["total"]) == ("TEST_wa", a_total)
+        assert all(e["handle"] != "TEST_wc" for e in d["entries"])
         tots = [e["total"] for e in d["entries"]]
         assert tots == sorted(tots, reverse=True)
-        # last week podium
-        lw = d["last_week_top"]
+
+    def test_last_week_podium(self, s):
+        c = dev(WK)
+        seed_daily(c, "TEST_wc2", LAST_MONDAY.isoformat(), 2499)
+        seed_daily(c, "TEST_wc2", (LAST_MONDAY + timedelta(days=3)).isoformat(), 2499)
+        lw = s.get(f"{BASE_URL}/api/weekly/{MONDAY.isoformat()}/leaderboard").json()["last_week_top"]
         assert len(lw) <= 3
-        assert any(e["handle"] == "TEST_wc" and e["total"] == 4998 and e["days"] == 2 for e in lw), lw
+        assert {"handle": "TEST_wc2", "total": 4998, "days": 2} in [{k: e[k] for k in ("handle", "total", "days")} for e in lw], lw
 
     def test_unknown_device_you_null(self, s):
-        r = s.get(f"{BASE_URL}/api/weekly/{MONDAY.isoformat()}/leaderboard", params={"device_id": dev()})
-        assert r.status_code == 200 and r.json()["you"] is None
+        r = s.get(f"{BASE_URL}/api/weekly/{MONDAY.isoformat()}/leaderboard", params={"device_id": dev(WK)})
+        assert r.status_code == 200
+        assert not r.json()["you"]
 
 
 # ---- Boss Rush ----
@@ -113,20 +133,26 @@ def rush(device, handle="TEST_rush", ms=90000, undos=0, splits=(30000, 30000, 30
 
 
 class TestBossRush:
-    def test_post_and_get(self, s):
-        d = dev()
-        r = s.post(f"{BASE_URL}/api/bossrush/scores", json=rush(d, ms=95000))
+    PREFIX = BR
+
+    def test_post_returns_entry(self, s):
+        r = s.post(f"{BASE_URL}/api/bossrush/scores", json=rush(dev(BR), ms=95000))
         assert r.status_code == 200, r.text
         e = r.json()
-        assert e["ms"] == 95000 and e["is_you"] and e["rank"] >= 1 and e["splits"] == [30000, 30000, 30000]
+        assert (e["ms"], e["is_you"], e["splits"]) == (95000, True, [30000, 30000, 30000])
+        assert e["rank"] >= 1
+
+    def test_get_board_sorted_with_you(self, s):
+        d = dev(BR)
+        s.post(f"{BASE_URL}/api/bossrush/scores", json=rush(d, ms=95000))
         g = s.get(f"{BASE_URL}/api/bossrush/leaderboard", params={"device_id": d}).json()
-        assert g["you"]["ms"] == 95000 and g["you"]["handle"] == "TEST_rush"
+        assert (g["you"]["ms"], g["you"]["handle"]) == (95000, "TEST_rush")
         ms = [x["ms"] for x in g["entries"]]
         assert ms == sorted(ms)
         assert g["total"] >= len(g["entries"])
 
     def test_keeps_best_and_refreshes_handle(self, s):
-        d = dev()
+        d = dev(BR)
         s.post(f"{BASE_URL}/api/bossrush/scores", json=rush(d, ms=100000))
         r = s.post(f"{BASE_URL}/api/bossrush/scores", json=rush(d, ms=92000, undos=1))
         assert r.json()["ms"] == 92000 and r.json()["undos"] == 1
@@ -138,7 +164,7 @@ class TestBossRush:
         assert g["you"]["ms"] == 92000 and g["you"]["handle"] == "TEST_renamed"
 
     def test_ms_less_than_splits_400(self, s):
-        r = s.post(f"{BASE_URL}/api/bossrush/scores", json=rush(dev(), ms=80000))
+        r = s.post(f"{BASE_URL}/api/bossrush/scores", json=rush(dev(BR), ms=80000))
         assert r.status_code == 400
 
     @pytest.mark.parametrize("patch", [
@@ -148,17 +174,17 @@ class TestBossRush:
         {"device_id": "bad$device$id"}, {"undos": -1},
     ])
     def test_validation_422(self, s, patch):
-        b = rush(dev())
+        b = rush(dev(BR))
         b.update(patch)
         r = s.post(f"{BASE_URL}/api/bossrush/scores", json=b)
         assert r.status_code in (400, 422), f"{patch} -> {r.status_code} {r.text}"
 
     def test_boundaries_ok(self, s):
-        r = s.post(f"{BASE_URL}/api/bossrush/scores", json=rush(dev(), ms=5000, splits=(1000, 1000, 3000)))
+        r = s.post(f"{BASE_URL}/api/bossrush/scores", json=rush(dev(BR), ms=5000, splits=(1000, 1000, 3000)))
         assert r.status_code == 200, r.text
 
     def test_concurrent_no_duplicates(self, s):
-        d = dev()
+        d = dev(BR)
         codes = []
 
         def go(ms):
@@ -172,7 +198,7 @@ class TestBossRush:
         assert db.bossrush_scores.find_one({"device_id": d})["ms"] == 91000
 
     def test_ties_share_rank(self, s):
-        d1, d2 = dev(), dev()
+        d1, d2 = dev(BR), dev(BR)
         s.post(f"{BASE_URL}/api/bossrush/scores", json=rush(d1, ms=777777, splits=(1000, 1000, 1000)))
         s.post(f"{BASE_URL}/api/bossrush/scores", json=rush(d2, ms=777777, splits=(1000, 1000, 1000)))
         g = s.get(f"{BASE_URL}/api/bossrush/leaderboard", params={"device_id": d1, "limit": 100}).json()

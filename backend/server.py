@@ -160,13 +160,18 @@ class LeaderboardOut(BaseModel):
     you: Optional[LeaderboardEntry] = None
 
 
-def _check_date(date: str, posting: bool):
-    if not DATE_RE.match(date):
-        raise HTTPException(400, "date must be YYYY-MM-DD")
+def _parse_day(value: str, fmt_error: str):
+    """YYYY-MM-DD -> date, or a 400. Always returns a date or raises (no unassigned paths)."""
+    if not DATE_RE.match(value):
+        raise HTTPException(400, fmt_error)
     try:
-        d = datetime.strptime(date, "%Y-%m-%d").date()
+        return datetime.strptime(value, "%Y-%m-%d").date()
     except ValueError:
-        raise HTTPException(400, "invalid date")
+        raise HTTPException(400, "invalid date") from None
+
+
+def _check_date(date: str, posting: bool):
+    d = _parse_day(date, "date must be YYYY-MM-DD")
     today = datetime.now(timezone.utc).date()
     # +-1 day tolerance for time zones; scores only accepted for the live puzzle window
     if posting and abs((d - today).days) > 1:
@@ -204,7 +209,7 @@ async def submit_daily_score(date: str, body: DailyScoreIn):
                 {"$set": {**body.model_dump(exclude={"device_id"}), "updated_at": now}},
                 return_document=ReturnDocument.AFTER,
             )
-            if doc is None:  # not better: keep the stored score, just refresh the handle
+            if not doc:  # not better: keep the stored score, just refresh the handle
                 doc = await db.daily_scores.find_one_and_update(
                     {"_id": existing["_id"]}, {"$set": {"handle": body.handle, "updated_at": now}}, return_document=ReturnDocument.AFTER
                 )
@@ -216,7 +221,7 @@ async def submit_daily_score(date: str, body: DailyScoreIn):
             break
         except DuplicateKeyError:
             continue
-    if doc is None:
+    if not doc:
         raise HTTPException(409, "please retry")
     s = DailyScore.from_mongo(doc)
     return _entry(s, await _rank_of(date, s.score, s.seconds), body.device_id)
@@ -259,12 +264,7 @@ class WeeklyOut(BaseModel):
 
 
 def _week_bounds(week_start: str):
-    if not DATE_RE.match(week_start):
-        raise HTTPException(400, "week must be YYYY-MM-DD")
-    try:
-        d = datetime.strptime(week_start, "%Y-%m-%d").date()
-    except ValueError:
-        raise HTTPException(400, "invalid date")
+    d = _parse_day(week_start, "week must be YYYY-MM-DD")
     if d.weekday() != 0:
         raise HTTPException(400, "week must start on a Monday (UTC)")
     return d
@@ -370,7 +370,7 @@ async def submit_bossrush(body: BossRushIn):
                 {"$set": {**body.model_dump(exclude={"device_id"}), "updated_at": now}},
                 return_document=ReturnDocument.AFTER,
             )
-            if doc is None:  # not faster: keep the best time, refresh handle
+            if not doc:  # not faster: keep the best time, refresh handle
                 doc = await db.bossrush_scores.find_one_and_update(
                     {"_id": existing["_id"]}, {"$set": {"handle": body.handle, "updated_at": now}}, return_document=ReturnDocument.AFTER
                 )
@@ -382,7 +382,7 @@ async def submit_bossrush(body: BossRushIn):
             break
         except DuplicateKeyError:
             continue
-    if doc is None:
+    if not doc:
         raise HTTPException(409, "please retry")
     s = BossRushScore.from_mongo(doc)
     return _rush_entry(s, await _rush_rank(s.ms), body.device_id)
