@@ -9,14 +9,15 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.emergent.starportlaunch.mzxeao"
+      "bundleIdentifier": "com.johnkenneally.starportrush",
+      "appleTeamId": "A8ZXDL6BS2"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.emergent.starportlaunch.mzxeao"
+      "package": "com.johnkenneally.starportrush"
     },
     "web": {
       "bundler": "metro",
