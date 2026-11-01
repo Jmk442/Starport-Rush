@@ -12,7 +12,6 @@ from pydantic import BaseModel, BeforeValidator, Field, ConfigDict, field_valida
 from typing import Annotated, List, Optional
 import uuid
 from datetime import datetime, timedelta, timezone
-import boto3
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -21,16 +20,6 @@ load_dotenv(ROOT_DIR / '.env')
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
-
-# Tigris S3-compatible client
-s3_client = boto3.client(
-    's3',
-    endpoint_url=os.environ.get('TIGRIS_ENDPOINT', 'http://localhost:8085'),
-    aws_access_key_id=os.environ.get('TIGRIS_ACCESS_KEY_ID', ''),
-    aws_secret_access_key=os.environ.get('TIGRIS_SECRET_ACCESS_KEY', ''),
-    region_name='auto',
-)
-TIGRIS_BUCKET = os.environ.get('TIGRIS_BUCKET', 'default-bucket')
 
 # Create the main app without a prefix
 app = FastAPI()
