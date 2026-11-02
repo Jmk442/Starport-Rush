@@ -87,3 +87,10 @@ User's words:
 "Champion Hat: Give the Weekly Cup winner a one-week Champion hat shown on every board and share card"
 "Cloud Save: Let progress follow a player across devices with a simple save code"
 Notes: no login or accounts (cloud save works with a save code only). Keep the App Store readiness settings from the last review intact. After the changes, rerun /app/frontend/scripts/build-game.sh so the web copy stays in sync.
+
+## Round 10
+User's words:
+"Set Version 1.0.2: Update the app to version 1.0.2 build 103 and point it at the live server"
+"Fix Web Icons: Fix the empty-box icons on the live website so every button shows properly"
+"Support Page: Add a simple support page with your contact email for the App Store listing"
+Notes: live server is https://starport-launch.emergent.host. Contact email johntilv4575@gmail.com. Keep Bundle ID com.johnkenneally.starportrush and Team ID A8ZXDL6BS2. No iOS build, upload or publish; the user publishes. Rerun /app/frontend/scripts/build-game.sh afterwards.

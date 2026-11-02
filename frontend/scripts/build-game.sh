@@ -11,6 +11,14 @@ cd /app/frontend/public
 rm -rf _expo assets
 cp -r "$OUT/_expo" "$OUT/assets" "$OUT/favicon.ico" .
 cp "$OUT/index.html" index.html
-# Policy lives with the backend (also served at /api/privacy); publish it at /privacy.html too.
+# Expo puts package assets (the Ionicons icon font) under assets/node_modules/, but .gitignore
+# drops every node_modules/ folder, so the deployed site never got the font and served HTML
+# instead. Move them to assets/vendor/ and repoint the bundle.
+if [ -d assets/node_modules ]; then
+  mv assets/node_modules assets/vendor
+  grep -rl "assets/node_modules/" _expo index.html | xargs -r sed -i 's#assets/node_modules/#assets/vendor/#g'
+fi
+# Policy and support pages live with the backend (also served at /api/privacy and /api/support).
 cp /app/backend/static/privacy.html privacy.html
+cp /app/backend/static/support.html support.html
 echo "Game web export copied into /app/frontend/public"

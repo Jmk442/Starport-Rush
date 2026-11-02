@@ -325,6 +325,14 @@ async def privacy_policy():
     return HTMLResponse(PRIVACY_HTML.read_text(encoding="utf-8"))
 
 
+SUPPORT_HTML = Path(__file__).parent / "static" / "support.html"
+
+
+@api_router.get("/support", response_class=HTMLResponse)
+async def support_page():
+    return HTMLResponse(SUPPORT_HTML.read_text(encoding="utf-8"))
+
+
 # ---------------------------------------------------------------------------
 # Weekly Cup: sum of each player's best daily score for each day of a UTC week (Mon-Sun)
 # ---------------------------------------------------------------------------

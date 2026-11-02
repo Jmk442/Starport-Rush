@@ -2,7 +2,7 @@
   "expo": {
     "name": "Starport Rush",
     "slug": "mobile",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mobile",
@@ -11,7 +11,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.johnkenneally.starportrush",
       "appleTeamId": "A8ZXDL6BS2",
-      "buildNumber": "2",
+      "buildNumber": "103",
       "config": {
         "usesNonExemptEncryption": false
       },

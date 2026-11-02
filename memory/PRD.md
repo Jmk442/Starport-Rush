@@ -89,3 +89,8 @@ Expo app requirement: /app/memory/product/requirements.md (+ full_spec.md). Prem
 - Champion Hat: last week's Weekly Cup winner(s) get a crown badge on Daily/Weekly/Boss Rush boards, a Weekly banner, and a champion ribbon + crown hats on their share card (GET /api/champion; `champion` flag on entries).
 - Cloud Save (no accounts): Settings > Cloud save creates an 8-char code (POST /api/saves), auto re-uploads on progress changes; restore with a code (GET /api/saves/{code}, rate-limited) merges stars and adopts the saved device id.
 - Privacy policy updated (app + /api/privacy). Tests: backend all pass, engine 112, daily/replay pass; testing agent iteration 12 passed, its minor issues fixed.
+
+## Round 10 (Nov 2026) — 1.0.2 (103), web icons, support page
+- app.json: version 1.0.2, iOS buildNumber 103 (Bundle ID / Team ID unchanged). mobile/.env untouched: production EXPO_PUBLIC_BACKEND_URL must be set to https://starport-launch.emergent.host in Deployment → Secrets.
+- Web icons: build-game.sh moves Expo's assets/node_modules (Ionicons font) to assets/vendor and repoints the bundle; node_modules/ was git-ignored so the font never deployed.
+- Support page: backend/static/support.html served at /api/support and copied to /support.html; linked from the privacy page.
